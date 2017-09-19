@@ -1,0 +1,166 @@
+body{
+    font-size: 14px!important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+.globalentry {
+    margin-left:0px;
+}
+.margin_info{
+    /*margin-left:300px;*/
+}
+.div1{
+    width:50%;
+    float:left;
+}
+.img_front,.selfi_img{
+    display:inline-block;
+    width:200px;
+    vertical-align: top;
+    height: 140px;
+    border: 2px solid;
+}
+.checkbox_div{
+    list-style-type: none !important;
+    display:inline-block;
+    margin:0px!important;
+    padding: 0px 0px 0px 10px !important;
+}
+.checkbox_div>li>input{
+    display:inline-block;
+}
+.div2{
+    float:right;
+    width:50%;
+}
+.cont{
+    margin-top:40px;
+}
+.checkbox_div1{
+    list-style-type: none !important;
+    display:inline-block;
+    margin-top:10px !important;
+}
+.checkbox_div1>li{
+    display:inline-block;
+    margin: 0px 15px 15px 0px;
+    text-align: left;
+}
+.checkbox_div1{
+    text-align: left;
+    padding:0px!important;
+}
+.textareardiv {
+    width: 665px;
+    padding:15px;  
+}
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+button{
+    background-color: #108eef;
+    border-color: #108eef;
+    color: #fff !important;
+    transition: all 0.4s linear;
+    border:none;
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 3px;
+
+}
+
+table tr th {
+    background: #108eef!important;
+    border-bottom-style: none;
+    border:none;
+    border-right: 1px solid #286090;
+    border-bottom: 1px solid #286090;
+    border-top: 1px solid #286090;
+    font-size: 12px;
+
+}
+table {
+    font-size: 12px!important;
+}
+table tr th:first-child {
+    border-left: 1px solid #286090;
+
+}
+input[type=button]{
+    background-color: #108eef;
+    border-color: #108eef;
+    color: #fff !important;
+    transition: all 0.4s linear;
+    border:none;
+    padding: 5px 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+button:hover {
+    background-color: #286090;
+    border-color: #286090;
+    color: #fff!important;
+    transition: all 0.4s linear;
+}
+table.dataTable {
+    padding: 10px 0px;
+}
+label {
+    display: inline-block;
+    max-width: 100%;
+    margin-bottom: 5px;
+    font-weight: 300 !important;
+}
+button[disabled], html input[disabled] {
+    cursor: default;
+    background: #666;
+}
+.textareardiv {
+    margin-top: 20px;
+    margin-left: 0px;
+}
+
+table.identity_Information{
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+    margin:0 !important;
+        font-size:13px !important; 
+}
+
+table.identity_Information td, th {
+   
+    text-align: left;
+    padding: 8px;
+}
+.ziehharmonika > div {
+    display: none;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #cdcdcd;
+    text-align: left;
+    padding: 0px!important;
+    margin-bottom: 9px;
+
+}
+.eligible_buttons{
+    text-align: center;
+    
+}
+.eligible_buttons input[type=button]{
+    display:inline-block;
+    
+}
+.content {
+    position: relative;
+}
+.img1,.img2{
+    /*transition: 0.2s all ease-in;*/
+    margin-bottom:50px;
+    
+}
+.btnRotate{/*margin-left:70px;*/}

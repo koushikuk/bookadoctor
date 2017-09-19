@@ -1,0 +1,99 @@
+  <?php
+/* call appointment_category API */
+
+ /**
+ * Implements hook_permission().
+ */
+function existing_appointment_permission() {
+
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+ function  existing_appointment_init(){
+ global $user;
+ 
+} 
+
+/**
+* Implements hook_form().
+*/
+ 
+ function existing_appointment_menu() {
+    global $user;
+  //appointment checking 
+  $items['check_appointment'] = array(
+    'title' => 'Check appointment',
+    'description' => 'Checking for existin appointment',
+    'page callback' => 'appointment_checking',
+    'page arguments' => array(''),
+    'access arguments' => array('access content'),
+  );
+
+ $items['send_appoinmentinfo'] = array(
+    'title' => 'Send Appointment infomation',
+    'description' => 'Sending for appointment information',
+    'page callback' => 'send_appinfo',
+    'page arguments' => array(''),
+    'access arguments' => array('access content'),
+  );
+
+
+   
+   return $items;
+ }
+function appointment_checking(){
+     
+
+     $applicationid = arg(1);
+     $patientid = arg(2);
+     $currentDate = date('m/d/Y');
+     
+     //Test data
+     //$serviceUrl =  "https://wiphy-api.inadev.net/emrservices-dev/patient/3654/schedule?emr_id=1&date=08/28/2017";
+     //$patientid = '3654';
+    
+    $serviceUrl =  "https://wiphy-api.inadev.net/emrservices-dev/patient/".$patientid."/schedule?emr_id=1&date=".$currentDate."";
+    $patientid = $patientid;
+
+    $data = array();
+    $data_string = json_encode($data);
+    $data_result = request_type($serviceUrl,$data_string);
+     
+     
+   // Get patienet data
+    
+    //$patient_serviceUrl =  "https://wiphy-api.inadev.net/emrservices-dev/patient/".$patientid."?emr_id=1";
+    $patient_serviceUrl =  "https://wiphy-api.inadev.net/emrservices-dev/patient/7470?emr_id=1"; 
+    $patient_data = array();
+    $patient_data_string = json_encode($patient_data);
+    $patient_data_result = request_type($patient_serviceUrl,$patient_data_string);
+    
+    $fullname = $patient_data_result['result']['DemoGraphicData']['Firstname']." ".$patient_data_result['result']['DemoGraphicData']['LastName'];
+    $no_of_appointments = count($data_result['result']);
+    $patientInfo = array("fullname"=>$fullname,'no_of_appointments'=>$no_of_appointments);
+    $appointmentDate = explode(" ",$data_result['result'][0]['StartTime']);
+     
+     
+    
+    return theme("appointment_checking", array("appointmentdata"=>$data_result, 'patientid' =>$patientid,'patientInfo' =>$patientInfo, 'appointmentDate' =>$appointmentDate[0], 'applicationid'=>$applicationid));
+}
+function send_appinfo(){
+  //print '<pre>';
+  //print_r($_POST);
+  
+}
+
+function existing_appointment_theme(){
+    return array(
+    'appointment_checking' => array(
+      'path' => drupal_get_path('module', 'existing_appointment'),
+      'template' => 'appointment_checking',
+      'variables' => array(
+      'results' => NULL,
+      ),
+  ),
+ );
+}

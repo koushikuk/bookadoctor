@@ -1,0 +1,4 @@
+name = visittype
+description =  This module is used to manage visittype functionality 
+package = Axelia Custom
+core = 7.x

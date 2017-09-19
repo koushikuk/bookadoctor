@@ -1,0 +1,4 @@
+name = Services API
+description = "REST Client Services API code"
+package = Telos Custom
+core = "7.x" 

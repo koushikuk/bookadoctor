@@ -1,0 +1,791 @@
+<?php
+   /**
+ * Implements hook_permission().
+ *
+ **/
+ function wiphyreport_permission(){
+	return array(
+		'access_reports' => array(
+			'title' => t('access reports section'),
+		)
+	);
+ }
+ 
+/**
+ * Implements hook_menu().
+ */
+ 
+ function wiphyreport_menu(){
+	 $items['wiphy_dashboard'] = array(
+		'title' => 'Astra Report', 
+		'description' => 'Wiphy  Reports',
+		'page callback' => 'enrollment_reports',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 $items['wiphy_report'] = array(
+		'title' => 'Admin Reports', 
+		'description' => 'Admin Reports',
+		'page callback' => 'enrollment_data',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 
+	 $items['wiphy_dasbord_ajax'] = array(
+		'title' => 'Wiphy  Reports', 
+		'description' => 'Wiphy  Reports',
+		'page callback' => 'wiphy_dasbord_ajax',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 
+	 $items['wiphy_dasbord_checkin_ajax'] = array(
+		'title' => 'Wiphy  checkin Reports', 
+		'description' => 'Wiphy  Checkin Reports',
+		'page callback' => 'wiphy_dasbord_checkin_ajax',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 
+	 $items['wiphy_dasbord_wait_ajax'] = array(
+		'title' => 'Wiphy  Waiting Reports', 
+		'description' => 'Wiphy  Waiting Reports',
+		'page callback' => 'wiphy_dasbord_wait_ajax',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 
+	 	 $items['current_dasbord_ajax'] = array(
+		'title' => 'current dasbord ajax', 
+		'description' => 'current dasbord ajax',
+		'page callback' => 'current_dasbord_ajax',
+		'page arguments' => '',
+		'access arguments' => array('access_reports'),
+	 );
+	 
+   return $items;
+ }
+ 
+/**
+ * Implements hook_init().
+ 
+ */
+function  wiphyreport_init(){
+ drupal_add_css(drupal_get_path('module', 'wiphyreport')."/css/chartStyle.css");	 
+} 
+/* remove array key custom function */ 
+function removeKeys( array $array )
+{
+  $array = array_values( $array );
+  foreach ( $array as &$value )
+  {
+    if ( is_array( $value ) )
+    {
+      $value = removeKeys( $value );
+    }
+  }
+  return $array;
+}  
+
+/*
+Today summary report custom function 
+*/
+function today_summary_reports(){
+	 db_set_active('ConnectRds');
+	 $checkin_data_array = array();
+	 $rds_data_array = array();
+	 $checkin_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as checkin_count from ".TABLENAME." where applicationStatus = 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d') = CURDATE() group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	 $checkin_count_result=$checkin_count->fetchAll();
+	 $date = $checkin_count_result->dashborddate;
+	 $i=0;
+	 //p($checkin_count_result,false);
+	 foreach($checkin_count_result as $checkinval){
+		  if($checkinval->applicationStatus){
+			  if(empty($checkinval->checkin_count)){
+				$rds_data_array[$i]['checkin_count'] = 0;
+			  }	else {  
+			  $rds_data_array[$i]['checkin_count'] = $checkinval->checkin_count;
+			  }
+			  
+			  if(!(array_key_exists('checkout_count',$rds_data_array[$i]['checkout_count']))){
+			
+				  $rds_data_array[$i]['checkout_count'] = 0;
+				  $checkin_count_result[$i]->checkout_count = 0;
+			  }  
+			  
+			   if(!(array_key_exists('incomplete_count',$rds_data_array[$i]['checkout_count']))){
+				  $rds_data_array[$i]['incomplete_count'] = 0;
+				  $checkin_count_result[$i]->incomplete_count = 0;
+			  } 
+			  
+			  
+			  
+			  $rds_data_array[$i][date] = $checkinval->dashborddate;
+		  }
+		  
+	   $i++;	  
+	  }
+	     
+	 
+	 $checkout_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as checkout_count from ".TABLENAME." where applicationStatus = 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d') = CURDATE()  group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	 
+	 $checkout_count_result=$checkout_count->fetchAll();
+	 $checkout_rds_data_array = array();
+	 
+	 $j=0;
+	 foreach($checkout_count_result as $checkoutval){
+		  if($checkoutval->applicationStatus){
+			  
+		  if(!(array_key_exists('checkin_count',$checkout_rds_data_array[$j]['checkin_count']))){
+			  $checkout_rds_data_array[$j]['checkin_count'] = 0;
+			  $checkout_count_result[$j]->checkin_count = 0;
+		  } 	  
+			  
+		  if(empty($checkoutval->checkout_count)){
+			$checkout_rds_data_array[$j]['checkin_count'] = 0;
+		  }	else {  
+		  $checkout_rds_data_array[$j]['checkout_count'] = $checkoutval->checkout_count;
+		  }
+		  
+		  
+		  if(!(array_key_exists('incomplete_count',$checkout_rds_data_array[$j]['incomplete_count']))){
+			  $checkout_rds_data_array[$j]['incomplete_count'] = 0;
+			  $checkout_count_result[$j]->incomplete_count = 0;
+		  }   
+		  
+		  $checkout_rds_data_array[$j][date] = $checkoutval->dashborddate;
+		  
+		  }
+	   $j++;	  
+	  }
+	  //p($checkout_count_result,false);
+	  $incomplete_rds_data_array = array();
+	 
+	 
+	  $incomplete_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as incomplete_count from ".TABLENAME." where applicationStatus <> 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' And applicationStatus<> 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d') = CURDATE() group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	  $incomplete_count_result=$incomplete_count->fetchAll(); 
+	  $date = $incomplete_count_result->dashborddate;
+	  $k=0;
+	  foreach($incomplete_count_result as $incompleteval){
+		  if($incompleteval->applicationStatus){
+			  
+		   if(!(array_key_exists('checkin_count',$incomplete_rds_data_array[$i]['checkin_count']))){
+			  $incomplete_rds_data_array[$k]['checkin_count'] = 0;
+			  $incomplete_count_result[$k]->checkin_count = 0;
+		  } 
+		  
+         if(!(array_key_exists('checkout_count',$incomplete_rds_data_array[$i]['checkout_count']))){
+			  $incomplete_rds_data_array[$k]['checkout_count'] = 0;
+			   $incomplete_count_result[$k]->checkout_count = 0;
+		  } 
+		  			  
+		  
+		  if(empty($incompleteval->incomplete_count)){
+			$incomplete_rds_data_array[$k]['incomplete_count'] = 0;
+		  }	else {  
+		  $incomplete_rds_data_array[$k]['incomplete_count'] = $incompleteval->incomplete_count;
+		  }
+		   
+		  $incomplete_rds_data_array[$k][date] = $incompleteval->dashborddate;
+		  }
+	   $k++;	  
+	  }
+	
+	 $array_all = array_merge($rds_data_array, $checkout_rds_data_array,$incomplete_rds_data_array);
+	 $new_array = array();
+	 foreach($array_all as $arr){
+		 if($arr['date']){
+		 if(in_array($arr['date'],array_keys($new_array))){
+			 
+			
+			$new_array[$arr['date']]['checkin_count'] = $new_array[$arr['date']]['checkin_count'] + $arr['checkin_count'];
+			$new_array[$arr['date']]['checkout_count'] = $new_array[$arr['date']]['checkout_count'] + $arr['checkout_count'];
+			$new_array[$arr['date']]['incomplete_count'] = $new_array[$arr['date']]['incomplete_count'] + $arr['incomplete_count']; 
+		 }
+		 else{
+			$new_array[$arr['date']] = array('date'=>$arr['date'],'incomplete_count'=>$arr['incomplete_count'],'checkin_count'=>$arr['checkin_count'],'checkout_count'=>$arr['checkout_count']);
+		 }
+	}	 
+		
+	 }
+	 if(empty($new_array)){ 
+		$new_array[date('%d-%M-%Y')] = array('date'=>date('%d-%M-%Y'),'incomplete_count'=>0,'checkin_count'=>0,'checkout_count'=>0);
+	  }	
+	 
+		 $dates = array();
+		 foreach ($new_array as $key => $row) {
+		  $dates[$key]  = $row['date'];
+		 }
+		 array_multisort($dates, SORT_ASC, $new_array);
+	   
+ return $new_array;
+ db_set_active();
+}
+
+
+/* Today summary report code end
+*/
+
+/// custom waittime function ///
+function calculate_wait_time(){
+	db_set_active('ConnectRds');
+	$milliseconds = round(time() * 1000);
+	 $waiting_count_query = "select count(*) as cnt,checkInTime,endTime, SUM(checkInTime - endTime) as delay, updateTime as waitdate,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d') as date from ".TABLENAME."  where endTime > 0 AND checkInTime > 0";
+	 if($_POST['facility']){
+		 
+		 $waiting_count_query.=" AND  facilityId=".$_POST['facility']."";
+		 
+	 }  
+	 
+	 $waiting_count_query.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%Y-%m-%d') order by updateTime DESC";
+	
+	$waiting_count = db_query($waiting_count_query);
+	 $waiting_count_result=$waiting_count->fetchAll();
+	 $i=0;
+	  $wait=array();
+	  foreach($waiting_count_result as $wait_time_val){
+			
+		if($wait_time_val){ 
+			
+			$avrg_delay_in_sec = round(($wait_time_val->delay/$wait_time_val->cnt)/60/1000);
+			//$wait[$i]['checkInTime'] = $wait_time_val->checkInTime;
+			//$wait[$i]['endTime'] = $wait_time_val->endTime;
+			//$wait[$i]['delay'] = $wait_time_val->delay;
+			$wait[$i]['wait_date'] = $wait_time_val->waitdate;
+			$wait[$i]['wait_time'] = $avrg_delay_in_sec;
+		}
+		$i++;  
+	  }
+	  if(empty($wait_time_val)){
+		  $wait[$i]['wait_date'] = $milliseconds;
+			$wait[$i]['wait_time'] = 0;
+	  }
+	  
+		//p($wait);
+	  //p($wait,false);
+db_set_active();
+return $wait;
+}
+
+////////////////////////////////// 
+ 
+ 
+//////// Wait Time Ajax ////
+function wiphy_dasbord_wait_ajax(){
+	$wait_time_data = calculate_wait_time(); 
+//p(removeKeys($wait_time_data,false));	
+	echo json_encode(removeKeys($wait_time_data),JSON_NUMERIC_CHECK); 
+}
+
+////////////////////////// 
+ 
+
+ function enrollment_reports(){
+	 db_set_active('ConnectRds');
+	   $rds_result = db_query("select * from ".TABLENAME.""); 
+	  $rds_result_set = $rds_result->fetchAll(); 
+	 // p($rds_result_set,false);
+	 $checkin_data_array = array();
+	 $rds_data_array = array();
+	 $checkin_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as checkin_count from ".TABLENAME." where applicationStatus = 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY ) group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	 $checkin_count_result=$checkin_count->fetchAll();
+	 $date = $checkin_count_result->dashborddate;
+	 $i=0;
+	 //p($checkin_count_result,false);
+	 foreach($checkin_count_result as $checkinval){
+		  if($checkinval->applicationStatus){
+			  if(empty($checkinval->checkin_count)){
+				$rds_data_array[$i]['checkin_count'] = 0;
+			  }	else {  
+			  $rds_data_array[$i]['checkin_count'] = $checkinval->checkin_count;
+			  }
+			  
+			  if(!(array_key_exists('checkout_count',$rds_data_array[$i]['checkout_count']))){
+			
+				  $rds_data_array[$i]['checkout_count'] = 0;
+				  $checkin_count_result[$i]->checkout_count = 0;
+			  }  
+			  
+			   if(!(array_key_exists('incomplete_count',$rds_data_array[$i]['checkout_count']))){
+				  $rds_data_array[$i]['incomplete_count'] = 0;
+				  $checkin_count_result[$i]->incomplete_count = 0;
+			  } 
+			  
+			  
+			  
+			  $rds_data_array[$i][date] = $checkinval->dashborddate;
+		  }
+		  
+	   $i++;	  
+	  }
+	     
+	 
+	 $checkout_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as checkout_count from ".TABLENAME." where applicationStatus = 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY )  group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	 
+	 $checkout_count_result=$checkout_count->fetchAll();
+	 $checkout_rds_data_array = array();
+	 
+	 $j=0;
+	 foreach($checkout_count_result as $checkoutval){
+		  if($checkoutval->applicationStatus){
+			  
+		  if(!(array_key_exists('checkin_count',$checkout_rds_data_array[$j]['checkin_count']))){
+			  $checkout_rds_data_array[$j]['checkin_count'] = 0;
+			  $checkout_count_result[$j]->checkin_count = 0;
+		  } 	  
+			  
+		  if(empty($checkoutval->checkout_count)){
+			$checkout_rds_data_array[$j]['checkin_count'] = 0;
+		  }	else {  
+		  $checkout_rds_data_array[$j]['checkout_count'] = $checkoutval->checkout_count;
+		  }
+		  
+		  
+		  if(!(array_key_exists('incomplete_count',$checkout_rds_data_array[$j]['incomplete_count']))){
+			  $checkout_rds_data_array[$j]['incomplete_count'] = 0;
+			  $checkout_count_result[$j]->incomplete_count = 0;
+		  }   
+		  
+		  $checkout_rds_data_array[$j][date] = $checkoutval->dashborddate;
+		  
+		  }
+	   $j++;	  
+	  }
+	  //p($checkout_count_result,false);
+	  $incomplete_rds_data_array = array();
+	 
+	 
+	  $incomplete_count = db_query("select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as incomplete_count from ".TABLENAME." where applicationStatus <> 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' And applicationStatus<> 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY ) group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')");
+	  $incomplete_count_result=$incomplete_count->fetchAll(); 
+	  $date = $incomplete_count_result->dashborddate;
+	  $k=0;
+	  foreach($incomplete_count_result as $incompleteval){
+		  if($incompleteval->applicationStatus){
+			  
+		   if(!(array_key_exists('checkin_count',$incomplete_rds_data_array[$i]['checkin_count']))){
+			  $incomplete_rds_data_array[$k]['checkin_count'] = 0;
+			  $incomplete_count_result[$k]->checkin_count = 0;
+		  } 
+		  
+         if(!(array_key_exists('checkout_count',$incomplete_rds_data_array[$i]['checkout_count']))){
+			  $incomplete_rds_data_array[$k]['checkout_count'] = 0;
+			   $incomplete_count_result[$k]->checkout_count = 0;
+		  } 
+		  			  
+		  
+		  if(empty($incompleteval->incomplete_count)){
+			$incomplete_rds_data_array[$k]['incomplete_count'] = 0;
+		  }	else {  
+		  $incomplete_rds_data_array[$k]['incomplete_count'] = $incompleteval->incomplete_count;
+		  }
+		   
+		  $incomplete_rds_data_array[$k][date] = $incompleteval->dashborddate;
+		  }
+	   $k++;	  
+	  }
+	
+	 $array_all = array_merge($rds_data_array, $checkout_rds_data_array,$incomplete_rds_data_array);
+	 $new_array = array();
+	 foreach($array_all as $arr){
+		 if($arr['date']){
+			$formated_date_key_object = date_create($arr['date']);
+			
+			$formated_date_key = $formated_date_key_object->getTimestamp();
+			
+		 if(in_array($formated_date_key,array_keys($new_array))){
+			
+			
+			
+			$new_array[$formated_date_key]['checkin_count'] = $new_array[$formated_date_key]['checkin_count'] + $arr['checkin_count'];
+			$new_array[$formated_date_key]['checkout_count'] = $new_array[$formated_date_key]['checkout_count'] + $arr['checkout_count'];
+			$new_array[$formated_date_key]['incomplete_count'] = $new_array[$formated_date_key]['incomplete_count'] + $arr['incomplete_count']; 
+		 }
+		 else{
+			$new_array[$formated_date_key] = array('date'=>$arr['date'],'incomplete_count'=>$arr['incomplete_count'],'checkin_count'=>$arr['checkin_count'],'checkout_count'=>$arr['checkout_count']);
+		 }
+	}	 
+		
+	 }
+	 
+	 if(empty($new_array)){ 
+		$new_array[date('%d-%m-%Y')] = array('date'=>date('%d-%m-%Y'),'incomplete_count'=>0,'checkin_count'=>0,'checkout_count'=>0);
+	  }	
+	 
+	 
+	 
+		krsort($new_array);
+         //p($new_array);
+	 $wait_time = calculate_wait_time();
+	 $current_report = today_summary_reports();
+	db_set_active(); 
+ return theme('enrollment_reports',array('current_summary'=>removeKeys($current_report),'astra_daily_summary_results' => removeKeys($new_array),'waiting_time_report'=>removeKeys($wait_time)));
+	 
+}
+
+
+function wiphy_dasbord_ajax(){
+	 db_set_active('ConnectRds');
+	   
+
+	 // p($rds_result_set,false);
+	 $checkin_data_array = array();
+	 $rds_data_array = array();
+	 
+	 $checkin_count_sql="select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as checkin_count from ".TABLENAME." where applicationStatus ='lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= (CURDATE() - INTERVAL 30 DAY ) ";
+	 
+	 if($_POST['facility'] > 0 ){
+	 $checkin_count_sql.=" AND facilityId=".$_POST['facility']."";
+	 }
+	 
+	 $checkin_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%m/%d/%Y')";
+
+	 
+	
+    $checkin_count = db_query($checkin_count_sql); 	
+	 $checkin_count_result=$checkin_count->fetchAll();
+	 $date = $checkin_count_result->dashborddate;
+	 $i=0;
+	 foreach($checkin_count_result as $checkinval){
+		  if($checkinval->applicationStatus){
+			  if(empty($checkinval->checkin_count)){
+				$rds_data_array[$i]['checkin_count'] = 0;
+			  }	else {  
+			  $rds_data_array[$i]['checkin_count'] = $checkinval->checkin_count;
+			  }
+			  
+			  if(!(array_key_exists('checkout_count',$rds_data_array[$i]['checkout_count']))){
+			
+				  $rds_data_array[$i]['checkout_count'] = 0;
+				  $checkin_count_result[$i]->checkout_count = 0;
+			  }  
+			  
+			   if(!(array_key_exists('incomplete_count',$rds_data_array[$i]['checkout_count']))){
+				  $rds_data_array[$i]['incomplete_count'] = 0;
+				  $checkin_count_result[$i]->incomplete_count = 0;
+			  } 
+			  
+			  
+			  
+			  $rds_data_array[$i][date] = $checkinval->dashborddate;
+		  }
+		  
+	   $i++;	  
+	  } 
+	     
+	 
+	  $checkout_count_sql= "select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as checkout_count from ".TABLENAME." where applicationStatus = 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY )";
+	 
+	 if($_POST['facility'] > 0){
+		 
+		 $checkout_count_sql.=" AND  facilityId=".$_POST['facility']."";
+		 
+	 }
+	 
+      $checkout_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')";
+
+	 $checkout_count = db_query($checkout_count_sql);
+	 $checkout_count_result=$checkout_count->fetchAll();
+	 $checkout_rds_data_array = array();
+	 
+	 $j=0;
+	 foreach($checkout_count_result as $checkoutval){
+		  if($checkoutval->applicationStatus){
+			  
+		  if(!(array_key_exists('checkin_count',$checkout_rds_data_array[$j]['checkin_count']))){
+			  $checkout_rds_data_array[$j]['checkin_count'] = 0;
+			  $checkout_count_result[$j]->checkin_count = 0;
+		  } 	  
+			  
+		  if(empty($checkoutval->checkout_count)){
+			$checkout_rds_data_array[$j]['checkin_count'] = 0;
+		  }	else {  
+		  $checkout_rds_data_array[$j]['checkout_count'] = $checkoutval->checkout_count;
+		  }
+		  
+		  
+		  if(!(array_key_exists('incomplete_count',$checkout_rds_data_array[$j]['incomplete_count']))){
+			  $checkout_rds_data_array[$j]['incomplete_count'] = 0;
+			  $checkout_count_result[$j]->incomplete_count = 0;
+		  }   
+		  
+		  $checkout_rds_data_array[$j][date] = $checkoutval->dashborddate;
+		  
+		  }
+	   $j++;	  
+	  } 
+	  //p($checkout_count_result,false);
+	  $incomplete_rds_data_array = array();
+	 
+	  	 $incomplete_count_sql= "select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%m-%Y') as dashborddate,updateTime,count(*) as incomplete_count from ".TABLENAME." where applicationStatus <> 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' And applicationStatus<> 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY )";
+	 
+	 if($_POST['facility'] > 0){
+		 
+		 $incomplete_count_sql.=" AND  facilityId=".$_POST['facility']."";
+		 
+	 }
+	 
+	 $incomplete_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')";
+	  
+	
+	  $incomplete_count = db_query($incomplete_count_sql);
+	  $incomplete_count_result=$incomplete_count->fetchAll(); 
+	  
+	  $date = $incomplete_count_result->dashborddate;
+	  $k=0;
+	  foreach($incomplete_count_result as $incompleteval){
+		  if($incompleteval->applicationStatus){
+			  
+		   if(!(array_key_exists('checkin_count',$incomplete_rds_data_array[$i]['checkin_count']))){
+			  $incomplete_rds_data_array[$k]['checkin_count'] = 0;
+			  $incomplete_count_result[$k]->checkin_count = 0;
+		  } 
+		  
+         if(!(array_key_exists('checkout_count',$incomplete_rds_data_array[$i]['checkout_count']))){
+			  $incomplete_rds_data_array[$k]['checkout_count'] = 0;
+			   $incomplete_count_result[$k]->checkout_count = 0;
+		  } 
+		  			  
+		  
+		  if(empty($incompleteval->incomplete_count)){
+			$incomplete_rds_data_array[$k]['incomplete_count'] = 0;
+		  }	else {  
+		  $incomplete_rds_data_array[$k]['incomplete_count'] = $incompleteval->incomplete_count;
+		  }
+		   
+		  $incomplete_rds_data_array[$k][date] = $incompleteval->dashborddate;
+		  }
+	   $k++;	  
+	  }
+	
+	 $array_all = array_merge($rds_data_array, $checkout_rds_data_array,$incomplete_rds_data_array);
+	 $new_array = array();
+	 	 foreach($array_all as $arr){
+		 if($arr['date']){
+			$formated_date_key_object = date_create($arr['date']);
+			
+			$formated_date_key = $formated_date_key_object->getTimestamp();
+			
+		 if(in_array($formated_date_key,array_keys($new_array))){
+			
+			
+			
+			$new_array[$formated_date_key]['checkin_count'] = $new_array[$formated_date_key]['checkin_count'] + $arr['checkin_count'];
+			$new_array[$formated_date_key]['checkout_count'] = $new_array[$formated_date_key]['checkout_count'] + $arr['checkout_count'];
+			$new_array[$formated_date_key]['incomplete_count'] = $new_array[$formated_date_key]['incomplete_count'] + $arr['incomplete_count']; 
+		 }
+		 else{
+			$new_array[$formated_date_key] = array('date'=>$arr['date'],'incomplete_count'=>$arr['incomplete_count'],'checkin_count'=>$arr['checkin_count'],'checkout_count'=>$arr['checkout_count']);
+		 }
+	}	 
+		
+	 }
+	 if(empty($new_array)){ 
+		$new_array[date('%d-%m-%Y')] = array('date'=>date('%d-%m-%Y'),'incomplete_count'=>0,'checkin_count'=>0,'checkout_count'=>0);
+	  }	
+	  krsort($new_array); 
+       echo json_encode(removeKeys($new_array),JSON_NUMERIC_CHECK); 
+	   db_set_active();
+}
+
+//////
+//////////  wiphy checkin ajax /////
+
+function wiphy_dasbord_checkin_ajax(){
+		 /////////////////////  chekin dashbord ////////////////////////
+	db_set_active('ConnectRds');	 
+   $checkin_dashbord_cnt = db_query("select DATE_FORMAT(FROM_UNIXTIME(startTime/1000),'%d-%M-%Y') as dashborddate, count(applicationStatus) as checkincnt from ".TABLENAME." where applicationStatus = 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')>= ( CURDATE() - INTERVAL 30 DAY ) group by DATE_FORMAT(FROM_UNIXTIME(startTime/1000), '%m/%d/%Y')");
+   $checkin_dashbord_result=$checkin_dashbord_cnt->fetchAll();
+   $checkIn_by_date = array();
+   $p=0;
+   foreach($checkin_dashbord_result as $checkin_dashbord_result_val){
+	   
+      $checkIn_by_date[$p]['checkincnt'] = $checkin_dashbord_result_val->checkincnt;
+      $checkIn_by_date[$p]['checkindate'] = $checkin_dashbord_result_val->dashborddate;
+   $p++;
+   }
+  // p($array_all,false);
+   //////////////////////////////////////////////////////////////////	 
+	 
+	 echo json_encode(removeKeys($checkIn_by_date),JSON_NUMERIC_CHECK); 
+	db_set_active();
+}
+
+function current_dasbord_ajax(){
+	 db_set_active('ConnectRds');
+	
+	 $checkin_data_array = array();
+	 $rds_data_array = array();
+	 
+	 $checkin_count_sql="select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as checkin_count from ".TABLENAME." where applicationStatus ='lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')= CURDATE() ";
+	 
+	 if($_POST['facility'] > 0 ){
+	 $checkin_count_sql.=" AND facilityId=".$_POST['facility']."";
+	 }
+	 
+	 $checkin_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%m/%d/%Y')";
+
+	 
+	
+    $checkin_count = db_query($checkin_count_sql); 	
+	 $checkin_count_result=$checkin_count->fetchAll();
+	 $date = $checkin_count_result->dashborddate;
+	 $i=0;
+	 foreach($checkin_count_result as $checkinval){
+		  if($checkinval->applicationStatus){
+			  if(empty($checkinval->checkin_count)){
+				$rds_data_array[$i]['checkin_count'] = 0;
+			  }	else {  
+			  $rds_data_array[$i]['checkin_count'] = $checkinval->checkin_count;
+			  }
+			  
+			  if(!(array_key_exists('checkout_count',$rds_data_array[$i]['checkout_count']))){
+			
+				  $rds_data_array[$i]['checkout_count'] = 0;
+				  $checkin_count_result[$i]->checkout_count = 0;
+			  }  
+			  
+			   if(!(array_key_exists('incomplete_count',$rds_data_array[$i]['checkout_count']))){
+				  $rds_data_array[$i]['incomplete_count'] = 0;
+				  $checkin_count_result[$i]->incomplete_count = 0;
+			  } 
+			  
+			  
+			  
+			  $rds_data_array[$i][date] = $checkinval->dashborddate;
+		  }
+		  
+	   $i++;	  
+	  } 
+	     
+	 
+	  $checkout_count_sql= "select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as checkout_count from ".TABLENAME." where applicationStatus = 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')=CURDATE()";
+	 
+	 if($_POST['facility'] > 0){
+		 
+		 $checkout_count_sql.=" AND  facilityId=".$_POST['facility']."";
+		 
+	 }
+	 
+      $checkout_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')";
+
+	 $checkout_count = db_query($checkout_count_sql);
+	 $checkout_count_result=$checkout_count->fetchAll();
+	 $checkout_rds_data_array = array();
+	 
+	 $j=0;
+	 foreach($checkout_count_result as $checkoutval){
+		  if($checkoutval->applicationStatus){
+			  
+		  if(!(array_key_exists('checkin_count',$checkout_rds_data_array[$j]['checkin_count']))){
+			  $checkout_rds_data_array[$j]['checkin_count'] = 0;
+			  $checkout_count_result[$j]->checkin_count = 0;
+		  } 	  
+			  
+		  if(empty($checkoutval->checkout_count)){
+			$checkout_rds_data_array[$j]['checkin_count'] = 0;
+		  }	else {  
+		  $checkout_rds_data_array[$j]['checkout_count'] = $checkoutval->checkout_count;
+		  }
+		  
+		  
+		  if(!(array_key_exists('incomplete_count',$checkout_rds_data_array[$j]['incomplete_count']))){
+			  $checkout_rds_data_array[$j]['incomplete_count'] = 0;
+			  $checkout_count_result[$j]->incomplete_count = 0;
+		  }   
+		  
+		  $checkout_rds_data_array[$j][date] = $checkoutval->dashborddate;
+		  
+		  }
+	   $j++;	  
+	  } 
+	  //p($checkout_count_result,false);
+	  $incomplete_rds_data_array = array();
+	 
+	  	 $incomplete_count_sql= "select  applicationStatus,DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%d-%M-%Y') as dashborddate,updateTime,count(*) as incomplete_count from ".TABLENAME." where applicationStatus <> 'dZUsK/Zngo6TZgO9p3FZeQc8Aqa85o4vKfbRm8mkTDE=' And applicationStatus<> 'lqsN0DxMt2Oc78lU0W+wrg==' AND DATE_FORMAT(FROM_UNIXTIME(updateTime/1000),'%Y-%m-%d')= CURDATE()";
+	 
+	 if($_POST['facility'] > 0){
+		 
+		 $incomplete_count_sql.=" AND  facilityId=".$_POST['facility']."";
+		 
+	 }
+	 
+	 $incomplete_count_sql.=" group by DATE_FORMAT(FROM_UNIXTIME(updateTime/1000), '%m/%d/%Y')";
+	  
+	
+	  $incomplete_count = db_query($incomplete_count_sql);
+	  $incomplete_count_result=$incomplete_count->fetchAll(); 
+	  
+	  $date = $incomplete_count_result->dashborddate;
+	  $k=0;
+	  foreach($incomplete_count_result as $incompleteval){
+		  if($incompleteval->applicationStatus){
+			  
+		   if(!(array_key_exists('checkin_count',$incomplete_rds_data_array[$i]['checkin_count']))){
+			  $incomplete_rds_data_array[$k]['checkin_count'] = 0;
+			  $incomplete_count_result[$k]->checkin_count = 0;
+		  } 
+		  
+         if(!(array_key_exists('checkout_count',$incomplete_rds_data_array[$i]['checkout_count']))){
+			  $incomplete_rds_data_array[$k]['checkout_count'] = 0;
+			   $incomplete_count_result[$k]->checkout_count = 0;
+		  } 
+		  			  
+		  
+		  if(empty($incompleteval->incomplete_count)){
+			$incomplete_rds_data_array[$k]['incomplete_count'] = 0;
+		  }	else {  
+		  $incomplete_rds_data_array[$k]['incomplete_count'] = $incompleteval->incomplete_count;
+		  }
+		   
+		  $incomplete_rds_data_array[$k][date] = $incompleteval->dashborddate;
+		  }
+	   $k++;	  
+	  }
+	
+	 $array_all = array_merge($rds_data_array, $checkout_rds_data_array,$incomplete_rds_data_array);
+	 $new_array = array();
+	 foreach($array_all as $arr){
+		 if($arr['date']){
+		 if(in_array($arr['date'],array_keys($new_array))){
+			 
+			
+			$new_array[$arr['date']]['checkin_count'] = $new_array[$arr['date']]['checkin_count'] + $arr['checkin_count'];
+			$new_array[$arr['date']]['checkout_count'] = $new_array[$arr['date']]['checkout_count'] + $arr['checkout_count'];
+			$new_array[$arr['date']]['incomplete_count'] = $new_array[$arr['date']]['incomplete_count'] + $arr['incomplete_count']; 
+		 }
+		 else{
+			$new_array[$arr['date']] = array('date'=>$arr['date'],'incomplete_count'=>$arr['incomplete_count'],'checkin_count'=>$arr['checkin_count'],'checkout_count'=>$arr['checkout_count']);
+		 }
+			
+	  }	 
+		
+	 }
+	 
+	   if(empty($new_array)){ 
+		$new_array[date('%d-%M-%Y')] = array('date'=>date('d-M-Y'),'incomplete_count'=>0,'checkin_count'=>0,'checkout_count'=>0);
+	  }	
+	 
+	 
+		 $dates = array();
+		 foreach ($new_array as $key => $row) {
+		  $dates[$key]  = $row['date'];
+		 }
+		 array_multisort($dates, SORT_ASC, $new_array);
+         //p($new_array,false);
+	   
+	   
+       echo json_encode(removeKeys($new_array),JSON_NUMERIC_CHECK); 
+	   db_set_active();
+}
+
+function wiphyreport_theme() {
+  return array(
+    'enrollment_reports' => array(
+      'template' => 'templates/enrollment_reports',
+      'variables' => array(
+        'results' => NULL,
+      ),
+     ),
+  );
+}
+?>

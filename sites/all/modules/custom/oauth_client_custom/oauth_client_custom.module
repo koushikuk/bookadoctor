@@ -1,0 +1,128 @@
+<?php
+
+
+/**
+ * Implements hook_services_resources().
+ */
+function oauth_client_custom_services_resources() {
+    $api = array(
+        'oauth2' => array(
+            'actions' => array(
+                'access-token' => array(
+                    'help' => 'Genererate Access Token',
+                    'callback' => 'oauth_client_custom_callback',
+                    'access arguments' => array('access content'),
+                    'access arguments append' => FALSE,
+                    'args' => array(
+                        array(
+                          'name' => 'user_data',
+                          'type' => 'struct',
+                          'description' => 'data',
+                          'source' => 'data',
+                          'optional' => FALSE,
+                        ),
+                    ),
+                ),
+		
+                'validate-access-token' => array(
+                    'help' => 'Validate Access Token',
+                    'callback' => 'oauth_client_custom_verify_token',
+                    'access arguments' => array('access content'),
+                    'access arguments append' => FALSE,
+                    'args' => array(
+                        array(
+                          'name' => 'access_token',
+                          'type' => 'struct',
+                          'description' => 'data',
+                          'source' => 'data',
+                          'optional' => FALSE,
+                        ),
+                    ),
+                ),
+            ),
+            
+        ),
+    );
+    
+    return $api;
+}
+
+/**
+ * Validate access token callback.
+ */
+function oauth_client_custom_verify_token($access_token_data){
+    $token = oauth2_server_token_load($access_token_data['Token']);
+    
+    if($token){
+		
+        $user = user_load($token->uid);
+		$user_details = save_data($user->uid); 
+        $user_data['Code'] = 'CD_SUCCESS';
+        $user_data['Message'] = 'The access token is valid';
+		if(isset($user_details['dl_first_name'])){
+			$user_data_profile['FirstNM']= $user_details['dl_first_name'];
+		}
+        if(isset($user_details['dl_last_name'])){
+			$user_data_profile['LastNM']= $user_details['dl_last_name'];
+		}
+        
+        $user_data_profile['Email'] = $user->mail;
+        $user_data['UserProfile'] = $user_data_profile;
+        $user_data['xml_root_element'] = 'ValidateAccessTokenResMsg';
+        return $user_data;
+    }else{
+        return array('Code'=>'CD_TKN_INVALID','Message'=>'The access token is either invalid or expired','xml_root_element'=>'ValidateAccessTokenResMsg');
+    }
+
+}
+
+/**
+ * Generate access token callback.
+ */
+function oauth_client_custom_callback($user_data) {
+  $client_name = 'default_client';
+  
+  $_GET = $user_data;
+  
+  try {
+    // Get an access token and output it.
+    $oauth2_client = oauth2_client_load($client_name);
+    $oauth2_client->clearToken();
+    $access_token = $oauth2_client->getAccessToken();
+    return  array('Code'=>'CD_SUCCESS','Message' => 'Access token successfully generated','Token'=>$access_token,'xml_root_element'=>'AccessTokenResMsg');
+  }
+  catch (Exception $e) {
+    return array('Code'=>'CD_ERROR','Message'=>$e->getMessage(),'xml_root_element'=>'AccessTokenResMsg');
+  }
+}
+  
+
+
+/**
+ * Implements hook_oauth2_clients().
+ */
+function oauth_client_custom_oauth2_clients() {
+    global $base_url;
+    $server_url = $client_url = $base_url;
+
+    $query_param = drupal_get_query_parameters();
+    // user-password flow
+    $oauth2_clients['default_client'] = array(
+      'token_endpoint' => $server_url . '/oauth2/token',
+      'auth_flow' => 'user-password',
+      'client_id' => 'default_client',
+      'client_secret' => '1234',
+      'username'=> $query_param['UserName'],
+      'password'=> $query_param['Password'],
+    );
+
+
+    return $oauth2_clients;
+}
+
+/**
+ * Implements hook_rest_server_response_formatters_alter().
+ */
+function oauth_client_custom_rest_server_response_formatters_alter(&$formatters){
+    $formatters['xml']['formatter class'] = 'oauth_client_custom_xml_formatter';
+}

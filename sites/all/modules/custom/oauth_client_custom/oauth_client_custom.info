@@ -1,0 +1,11 @@
+name = OAuth2 Client Custom
+description = "Provide customization and new functionality for OAuth2."
+package = "OAuth2"
+files[] = oauth_client_custom_xml_formatter.inc
+
+; Information added by Drupal.org packaging script on 2014-12-19
+version = "7.x-3.0-rc5"
+core = "7.x"
+project = "oauth_client_custom"
+datestamp = "1419029284"
+

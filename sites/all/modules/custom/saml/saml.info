@@ -1,0 +1,4 @@
+name = SAML
+description =  This module is used as SAML Service provider 
+package = Telos Rewards
+core = 7.x

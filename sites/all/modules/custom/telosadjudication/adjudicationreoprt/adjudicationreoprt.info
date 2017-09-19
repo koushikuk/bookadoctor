@@ -1,0 +1,4 @@
+name = Adjudication Reoprt
+description =  This module is used to manage adjudication Report 
+package = Telos Adjudication Reoprt
+core = 7.x

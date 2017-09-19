@@ -1,0 +1,1701 @@
+<?php
+/* time diff */
+
+
+ /**
+ * Implements facility Id().
+ */
+function wiphy_generate_message_code(){
+	
+	      $string          = '1234567890';
+        $string_shuffled = str_shuffle( $string );
+        $message_random_number  = substr( $string_shuffled, 1, 4 );
+        $message_string   = urlencode($message_random_number);
+				return $message_string;
+}
+
+ /**
+ * Implements facility Id().
+ */
+function wiphy_status_code(){
+$status_array = array("Success" => "0001","No Data Found" => "0002");													
+return array_values($status_array);							
+}
+ 
+ /**
+ * Implements hook_permission().
+ */
+function wiphyadjudication_permission() {
+  return array( 
+    'access_adjudication' => array(
+      'title' => t('access adjudication section'),
+    )
+  );
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+ function  wiphyadjudication_init(){
+ global $user;
+ if(!(in_array('administrator',$user->roles))){
+    //drupal_add_css(drupal_get_path('module', 'wiphyadjudication')."/css/bootstrap.min.css");	
+   /*  drupal_add_css(drupal_get_path('module', 'wiphyadjudication')."/css/custom.css");
+    drupal_add_css(drupal_get_path('module', 'wiphyadjudication')."/css/listing.css");  */
+ } 	 
+    drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/wiphycustom.js");
+    drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/moment.js");
+    drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/moment-timezone-with-data.js");
+    drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/jstz.min.js");
+} 
+
+/**
+* Implements hook_form().
+*/
+ 
+ function wiphyadjudication_menu() {
+    global $user;
+	$userid = $user->uid;
+    $userdata = user_load($userid);
+	$facility_id = taxonomy_term_load($userdata->field_facility_id['und'][0]['tid']);
+	/* if(!empty($facility_id->name)){
+		$facility_name = ' - '.$facility_id->name;
+	} */
+  $facilityname = $facility_id->name;
+  $items['adjudication-queue'] = array(
+		//'title' => t('Adjudication Queue'), 
+		'title arguments' => array(),
+    'title callback' => 'getFacilityID',
+		'description' => 'Listing of all available adjudication record in queue',
+    'page callback' => 'drupal_get_form',
+	    //'page arguments' => array('wiphyadjudication_listing_form'),
+	  'page arguments' => array('wiphyadjudication_listing_form'),
+		'access arguments' => array('access_adjudication'),
+	);
+
+  $items['wiphyadjudication_datasource'] = array(
+		'title' => 'Adjudication data', 
+		'description' => 'adjudication data source',
+		'page callback' => 'wiphyadjudication_datasource',
+		'page arguments' => '',
+		'access arguments' => array('access content'),
+	);
+	$items['adjudication_decrypt'] = array(
+     'title' => 'wiphy adjudication data decrypt',
+     'description' => 'Adjudication data encrypt and decrypt',
+     'page callback' => 'adjudication_decrypt',
+     'page arguments' => '',
+	   'access arguments' => array('access content'),
+ 
+   	);
+	
+	 $items['wiphy_adjudicator_action'] = array(
+     'title' => 'wiphy adjudicator action for update API',
+     'description' => 'Adjudcator update API',
+     'page callback' => 'wiphy_adjudicator_action',
+     'page arguments' => '',
+	   'access arguments' => array('access content'),
+ 
+   	);
+	
+	
+	 $items['get_timezone'] = array(
+     'title' => 'wiphy adjudicator timezone',
+     'description' => 'Adjudcator timezone',
+     'page callback' => 'wiphy_timezone',
+     'page arguments' => '',
+	   'access arguments' => array('access content'),
+ 
+   	);
+	
+	$items['wiphy/facility'] = array(
+		//'title' => t('Adjudication Queue'), 
+	'title arguments' => array(),
+    'title callback' => 'getfacilitydetails',
+	'description' => 'Get facility with id, name and password',
+	'page callback' => 'get_facility',
+	'page arguments' => '',
+	//'access arguments' => array('access_adjudication'),
+	'access callback' => true,
+	);
+   $items['getFacilityTid'] = array(
+   	'title' => 'get facility tid',
+     'description' => 'This hook helps to get facility tid',
+     'page callback' => 'getFacilityTid',
+     'page arguments' => '',
+	 'access arguments' => array('access content'),
+   	);
+	
+	$items['adjudicator_cron'] = array(
+     'title' => 'wiphy adjudicator action for update API',
+     'description' => 'Adjudcator update API',
+     'page callback' => 'adjudicator_cron',
+     'page arguments' => '',
+	 'access arguments' => array('access content'),
+ 
+   	);
+	
+  $items['showinsurance'] = array(
+   'title' => 'Show Insurance',
+   'description'=> 'show insurace details',
+   'page callback'=> 'showinsurance',
+   'page arguments' => '',
+   'access arguments' => array('access content'),
+  );
+  // added on 13-07-2017
+  $items['updateinstatus'] = array(
+   'title' => 'Show Insurance',
+   'description'=> 'Update insurance status',
+   'page callback'=> 'updateinstatus',
+   'page arguments' => '',
+   'access arguments' => array('access content'),
+  );
+  
+ //end added on 13-07-2017 
+  
+ $items['showreasons'] = array(
+   'title' => 'Show Rasons',
+   'description'=> 'show reson details',
+   'page callback'=> 'showreasons',
+   'page arguments' => '',
+   'access arguments' => array('access content'),
+  );
+
+  $items['wiphy/get_iosapp'] = array(
+  'title' => t('Fetch ios app version'), 
+  'description' => 'Fetch ios app version',
+  'page callback' => 'fetch_iosapp',
+  'page arguments' => '',
+  'access arguments' => array('access_adjudication'),
+  'access callback' => true,
+  );
+
+
+
+   
+   return $items;
+ }
+function wiphyadjudication_listing_form($form, &$form_state){ 
+	global $user;
+	$userdetails = user_load($user->uid);
+	//drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/jquery-1.10.0.min.js");
+    drupal_add_js(drupal_get_path('module', 'wiphyadjudication')."/js/bootstrap.min.js");
+	drupal_add_js(drupal_get_path('module', 'adjudication')."/js/jquery.dataTables.js");
+    drupal_add_css(drupal_get_path('module', 'adjudication')."/css/jquery.dataTables.css");
+	
+	 
+ 	//return theme("wiphyadjudication_listing_form",array('data'=>$data));
+     
+  
+ 
+    $facilityDDArray = array();
+ 
+  if(in_array('adjudicator', $userdetails->roles)) { 
+   if(count($userdetails->field_facility_id)>0){ 
+	foreach ($userdetails->field_facility_id['und'] as $key => $value) {
+	    $facility = taxonomy_term_load($value['tid']);
+        $key = $facility->tid;
+		$value = $facility->name;
+		$facilityDDArray[$key] = $value;
+    }
+ 
+
+	   $form['fac_id'] = array(
+		'#title' => 'Card Type',
+		'#type' => 'select',
+	    '#value' => $_SESSION['facID'],
+	    //'#required' => TRUE,
+	    '#theme_wrappers' => array(),
+	    '#options' =>  $facilityDDArray,
+	    '#attributes' => array('onchange' => 'this.form.submit();'),	
+		);
+ 
+	   // Added on 10-07-2017  
+	   /*$form['from_date'] = array(
+	    '#title' => t('From Date:'),
+	    '#date_label_position' => 'within',
+	    '#date_year_range' => '-10:+0',
+	    '#type' => 'date_popup',
+	    '#date_format' => 'Y-m-d',
+	    '#description' => t(''),
+	    );
+      $form['to_date'] = array(
+	    '#title' => t('To Date:'),
+	    '#date_label_position' => 'within',
+	    '#date_year_range' => '-10:+0',
+	    '#type' => 'date_popup',
+	    '#date_format' => 'Y-m-d',
+	    '#description' => t(''),
+	    );*/
+ 	  // Added on 02-08-2017
+      
+      $form['currntdayrecord'] = array(
+        '#title' => 'current day record',
+        '#type' => 'submit',
+        '#attributes'=>array('class'=> array('btn btn-primary custom-btn search-btn')),
+        '#value'=> t("Today"),
+      );
+     $form['lastweekrecord'] = array(
+        '#title' => 'Last Week Record',
+        '#type' => 'submit',
+		'#attributes'=>array('class'=> array('btn btn-primary custom-btn search-btn')),		
+        '#value'=> t("Last Week"),
+      );
+ 
+	}  
+  }
+  
+  if((in_array('administrator', $userdetails->roles)) || (in_array('wiphy_adjudicator_admin', $userdetails->roles))) {	 
+
+    $vocabulary = taxonomy_vocabulary_machine_name_load('facility');
+
+	$vocabulary_vid = $vocabulary->vid;
+	$terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+
+foreach($terms as $key=>$val){
+ 
+		//$facility_types[$val->name] = $val->tid;
+ 
+        $key = $val->tid;
+		$value = $val->name;
+		$facilityDDArray[$key] = $value; 
+
+    }
+ 
+ 
+	foreach ($userdetails->field_facility_id['und'] as $key => $value) {
+	    $facility = taxonomy_term_load($value['tid']);
+        $key = $facility->tid;
+		$value = $facility->name;
+
+		$facilityDDArray[$key] = $value;
+    }
+    $facilityDDArray[0] = 'All';
+    
+    $last_val = end($facilityDDArray);
+    $last_key = key($facilityDDArray);
+    //unset($facilityDDArray[$key]);
+    $facilityDDArray = array($last_key => $last_val) + $facilityDDArray; 
+    
+
+	   $form['fac_id'] = array(
+		'#title' => 'Card Type',
+		'#type' => 'select',
+	    '#value' => $_SESSION['facID'],
+	    //'#required' => TRUE,
+	    '#theme_wrappers' => array(),
+	    '#options' =>  $facilityDDArray,
+	    '#attributes' => array('onchange' => 'this.form.submit();'),	
+		);
+	 // Added on 10-07-2017  
+	   /*$form['from_date'] = array(
+	    '#title' => t('From Date:'),
+	    '#date_label_position' => 'within',
+	    '#date_year_range' => '-10:+0',
+	    '#type' => 'date_popup',
+	    '#default_value' => $_SESSION['fromDate'],
+	    '#date_format' => 'Y-m-d',
+	    '#description' => t(''),
+	    );
+      $form['to_date'] = array(
+	    '#title' => t('To Date:'),
+	    '#date_label_position' => 'within',
+	    '#date_year_range' => '-10:+0',
+	    '#type' => 'date_popup',
+	    '#default_value' => $_SESSION['endDate'],
+	    '#date_format' => 'Y-m-d',
+	    '#description' => t(''),
+	    );*/
+
+     $form['currntdayrecord'] = array(
+        '#title' => 'current day record',
+        '#type' => 'submit',
+        '#attributes'=>array('class'=> array('btn btn-primary custom-btn search-btn')),
+        '#value'=> t("Today"),
+    	);
+     $form['lastweekrecord'] = array(
+        '#title' => 'Last Week Record',
+        '#type' => 'submit',
+        '#attributes'=>array('class'=> array('btn btn-primary custom-btn search-btn')),		
+        '#value'=> t("Last Week"),
+    	);
+ 
+
+
+ 	  // Added on 10-07facilityDDArrayfacilityDDArray-2facilityDDArray017 
+ 
+
+   } 
+
+   //print '<pre>';
+  // print_r($facilityDDArray);
+  
+  //die;
+
+    /*$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Search',
+  );
+
+  $form['resetfrm'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset'),
+    '#submit' => array('wiphyadjudication_listing_form_reset'),
+    //'#attributes' => array('onchange' => 'clearForm();'),
+  );*/
+ 
+ 	return $form;
+ }
+ // Added on 10-07-2017 
+function wiphyadjudication_listing_form_validate($form, &$form_state){
+	  /*$fromDate = $form_state['input']['from_date']['date'];
+	  $toDate = $form_state['input']['to_date']['date'];
+      $curDate = date('Y-m-d');
+  
+      if(strtotime($fromDate)>strtotime($toDate)){
+    	 form_set_error($fromDate);
+    	 drupal_set_message(t('From Date should not be greater than To Date'), 'error');
+      }
+   
+     if(strtotime($toDate)>strtotime($curDate)){
+    	 form_set_error($toDate);
+    	 drupal_set_message(t('To Date should not be greater than Current Date'), 'error');
+      }
+
+   if(($fromDate !="") && ($toDate == "") || ($fromDate =="") && ($toDate != "")){
+         form_set_error($toDate);
+    	 drupal_set_message(t('Please provide both the from date and to date'), 'error');
+   } */  
+
+}	
+// Added on 10-07-2017 
+ function wiphyadjudication_listing_form_submit($form, &$form_state){ 
+   global $user;
+
+     
+
+    if($form_state['input']['fac_id']!=''){
+	  	$_SESSION['facID'] = $form_state['input']['fac_id'];
+	  }
+	  
+    /*$_SESSION['fromDate']  = $form_state['input']['from_date']['date'];
+    $from_date = $form_state['input']['from_date']['date'].' 00:00:00';
+    $from_date = new DateTime($from_date);
+
+    //$currentDate = date_timestamp_get($date);
+    $finalfrom_date = ($from_date->getTimestamp())*1000;
+    $_SESSION['startDate'] = $finalfrom_date;
+ 
+    $to_date =  $form_state['input']['to_date']['date'];
+    $_SESSION['endDate'] = $to_date;
+    $to_date = new DateTime($to_date);
+
+    $daydiff = $to_date->diff($from_date)->format("%a");
+    $_SESSION['days'] = $daydiff;*/ 
+
+   if($form_state['values']['op'] == "Today"){
+    $UTC = new DateTimeZone("UTC");
+    $currentDate = date('Y-m-d 00:00:00');
+    $currentDate = new DateTime($currentDate, $UTC );
+    //$currentDate = date_timestamp_get($date);
+	$finaldCurDate = ($currentDate->getTimestamp())*1000;
+
+    $_SESSION['startingDate'] = $finaldCurDate;
+    $_SESSION['daydiff'] = 1;
+   
+   }
+   if($form_state['values']['op'] == "Last Week"){
+    $currentDate = date('Y-m-d 00:00:00', strtotime("-7 days"));
+    $currentDate = new DateTime($currentDate, $UTC );
+    //$currentDate = date_timestamp_get($date);
+	$finaldCurDate = ($currentDate->getTimestamp())*1000;
+    
+    $_SESSION['startingDate'] = $finaldCurDate;
+    $_SESSION['daydiff'] = 8;
+   }
+ 
+ }	
+ 
+function wiphyadjudication_theme($existing, $type, $theme, $path) { 
+     $items['wiphyadjudication_listing_form'] = array(
+     	'render element' => 'form',
+        'template' => 'wiphyadjudication_listing',
+        /*'variables' => array(
+	    'results' => NULL,
+	      ),*/ 
+	   'path' => drupal_get_path('module', 'wiphyadjudication'),  
+    );
+   return $items;
+}
+/* cron adjudicator_cron wiphyadjudication_cron */
+function wiphyadjudication_cron(){
+module_load_include('inc', 'wiphyadjudication', 'wiphy_update_api.pages');
+ $UTC = new DateTimeZone("UTC");
+ $currentDate = date('Y-m-d 00:00:00');
+ $currentDate = new DateTime($currentDate, $UTC);
+    //$currentDate = date_timestamp_get($date);
+ $finaldCurDate = ($currentDate->getTimestamp())*1000;
+ $dateFilter = array(
+          'startDate' =>$finaldCurDate,
+          'days'  => 1,
+  );
+
+ $dataArray = fetch_wiphydata_by_status($application_status, $dateFilter);
+ $application_status= array(fnEncrypt('COMPLETED'));
+ $dataArray = fetch_wiphydata_by_status($application_status);
+ 
+
+ $UTC = new DateTimeZone("UTC");
+ $currentDate = date('Y-m-d 00:00:00');
+ $currentDate = new DateTime($currentDate, $UTC);
+    //$currentDate = date_timestamp_get($date);
+ $finaldCurDate = ($currentDate->getTimestamp())*1000;
+ $dateFilter = array(
+          'startDate' =>$finaldCurDate,
+          'days'  => 1,
+  );
+
+$dataArray = fetch_wiphydata_by_status($application_status, $dateFilter);
+
+ 
+$i=0;
+foreach($dataArray['result'] as $val){
+		  //$result[] = fetch_wiphylambda_data($val);
+		  
+  if(isset($_SESSION['lcl_timezone'])){
+		date_default_timezone_set($_SESSION['lcl_timezone']);
+	}
+    //date_default_timezone_set($timeZone) ;
+   //date_default_timezone_set('Asia/Kolkata') ;
+	//watchdog("localtimezone",print_r(date_default_timezone_get(),true));
+	$starttime = (!empty($val['startTime'])) ? $val['startTime'] : '';
+	if(!empty($starttime)){
+		$starttime = date('Y-m-d',($starttime/1000));
+		$starttime = new DateTime($starttime);
+		$startTime = $starttime->format('Y-m-d');
+	 }
+
+    $currentDate = date('Y-m-d');	
+    $currentDate = new DateTime($currentDate);
+	$currentDate = $currentDate->format('Y-m-d');	
+		  
+		  
+		  
+	$appStatus = fnDecrypt($val['applicationStatus']);
+   	$row[$i]['status'] = $appStatus;
+    $row[$i]['starttime'] = $startTime;	
+    $row[$i]['currentDate'] = $currentDate;	
+    $row[$i]['applicationId'] = (!empty($val['applicationId'])) ? $val['applicationId'] : ''; 
+	
+	if($row[$i]['starttime'] == $row[$i]['currentDate'] && $row[$i]['status']=='COMPLETED'){
+	$_POST['adjtype'] = 'CHECK_OUT_COMPLETED';
+	$_POST['appid'] = $row[$i]['applicationId'];
+	watchdog('wiphycron',$_POST['appid']);
+	call_lambda($_POST);
+    }
+  $i++;
+  
+ }
+ 
+  
+}
+  
+/* cron code end */  
+
+function wiphyadjudication_datasource(){ 
+	//watchdog("Facility Id in datasource",print_r($_SESSION['facID'],true));
+	global $user;
+	$userdetails = user_load($user->uid);
+	$facility_tid = $userdetails->field_facility_id['und'][0]['tid'];
+	$facility = taxonomy_term_load($facility_tid);
+    $facility_name = $facility->name;
+     
+ // get all pending adjudication data
+   
+	  if(!empty($_SESSION['facID'])){
+	  	$facID = $_SESSION['facID'];
+	  } else {
+	  	$facID = $userdetails->field_facility_id['und'][0]['tid'];
+	  }
+
+   // Default current date to show all record 20-07-2017
+    $UTC = new DateTimeZone("UTC");
+    $currentDate = date('Y-m-d 00:00:00');
+    $currentDate = new DateTime($currentDate, $UTC );
+    //$currentDate = date_timestamp_get($date);
+	$finaldCurDate = ($currentDate->getTimestamp())*1000;
+
+   /*if($_SESSION['days'] ==0){
+   	 $_SESSION['days'] =1;
+   })*/
+
+	/*if(($_SESSION['startDate'] !="") && ($_SESSION['days'] !="")){
+      $dateFilter = array(
+          'startDate' =>$_SESSION['startDate'],
+          'days'  => $_SESSION['days'],
+		);
+
+	} else {
+			$dateFilter = array(
+          'startDate' =>$finaldCurDate,
+          'days'  => 1,
+		);
+	}*/
+ 
+
+    if(!empty($_SESSION['startingDate'])){
+    	$startingDate = $_SESSION['startingDate'];
+    }else {
+    	$startingDate =  $finaldCurDate;
+    }
+
+    if(!empty($_SESSION['daydiff'])){
+    	$daydiff = $_SESSION['daydiff'];
+    }else {
+    	$daydiff = 1;
+    }
+
+
+
+ 
+		$dateFilter = array(
+          'startDate' =>$startingDate,
+          'days'  => $daydiff,
+		);
+
+	 
+	  
+
+
+ // End default current date to show all record 20-07-2017
+	 
+
+   if((in_array('administrator', $user->roles)) || (in_array('wiphy_adjudicator_admin', $user->roles))) {
+		/* $application_status  = array((fnEncrypt('APP_INITIATED')),(fnEncrypt('ASSOCIATE_PATIENT')), (fnEncrypt('PATIENT_ASSOCIATED')),(fnEncrypt('NOT_VERIFIED')),(fnEncrypt('REG_COMPLETED')),(fnEncrypt('VERIFIED')), (fnEncrypt('VERIFIED_BY_ADJUDICATOR')), (fnEncrypt('COMPLETED')),(fnEncrypt('CHECK_OUT_COMPLETED')));*/
+     $application_status  = array();
+         
+          if(!empty($_SESSION['facID'])){
+		 	  $dataArray = fetch_wiphydata_by_status($application_status,$dateFilter,$_SESSION['facID']);
+          }else {
+          	  $dataArray = fetch_wiphydata_by_status($application_status,$dateFilter);
+          }
+	 
+		 $usertype = 'admin';
+	}
+    if(in_array('adjudicator', $user->roles)) {
+		 $userdetails  = user_load($user->uid);
+	    // $facilityID =  taxonomy_term_load($userdetails->field_facility_id['und'][0]['tid']);
+	    // $appstatus  = array((fnEncrypt('APP_INITIATED')),(fnEncrypt('ASSOCIATE_PATIENT')), (fnEncrypt('PATIENT_ASSOCIATED')),(fnEncrypt('NOT_VERIFIED')), (fnEncrypt('VERIFIED')), (fnEncrypt('COMPLEATED')));
+      /*$application_status  = array((fnEncrypt('APP_INITIATED')),(fnEncrypt('ASSOCIATE_PATIENT')), (fnEncrypt('PATIENT_ASSOCIATED')),(fnEncrypt('NOT_VERIFIED')),(fnEncrypt('REG_COMPLETED')),(fnEncrypt('VERIFIED')), (fnEncrypt('VERIFIED_BY_ADJUDICATOR')), (fnEncrypt('COMPLETED')),(fnEncrypt('CHECK_OUT_COMPLETED')));*/
+     $application_status  = array(); 
+ 
+         $dataArray = fetch_wiphydata_by_status($application_status,$dateFilter,$facID);
+		 $usertype = 'adjudicator';
+   }
+   
+	 $i=0;
+	 foreach($dataArray['result'] as $val){
+		  //$result[] = fetch_wiphylambda_data($val);
+	$appStatus = fnDecrypt($val['applicationStatus']);	  
+		  
+     
+   
+   // if(!empty($val['insurance'])){
+   if($val['insurance'] != null){
+       //if(count($val['insurance'])>0){
+       $insuraceData = 'yes';		   
+	   // $insurance_card = '<button type="button" class="testclass" data-toggle="modal" data-target="#edit-modal" data-appid="'.$val['applicationId'].'" "id="insdata_'.$val['applicationId'].'">Insurance</button>'; 
+	    $insurance_card = '<button type="button" class="testclass" data-toggle="modal" data-target="#edit-modal" id="insdata_'.$val['applicationId'].'">Insurance</button>'; 
+        
+   }else {
+	   $insurance_card = '&nbsp;';
+	   $insuraceData = 'no';
+   }
+  
+
+     // Reason for not checkin
+
+
+
+
+ // if(array_key_exists('reasonCheckInFailure', $val)){
+  if((!empty($val['reasonCheckInFailure'])) || ($appStatus =="COMPLETED") || ($appStatus =="CHECK_OUT_COMPLETED")) {
+    
+  // if(($appStatus!="COMPLETED") && ($appStatus!="CHECK_OUT_COMPLETED")){
+           //$checkin_reason = '&nbsp;';
+  
+          //}
+
+     //else {
+            $checkin_reason = '<button type="button" class="reasonclass" data-toggle="modal" data-target="#checkin_reason-modal" id="checkinreason_'.$val['applicationId'].'" disabled="disabled">Reason</button>';
+       // }
+ 
+   }
+
+   else{
+
+     $checkin_reason = '<button type="button" class="reasonclass" data-toggle="modal" data-target="#checkin_reason-modal" id="checkinreason_'.$val['applicationId'].'">Reason</button>';
+   	  
+   }
+
+
+      if((!empty($val['reasonCheckInFailure']))){
+       $disabledValue = 'disabled="disabled"';
+     } else {
+        $disabledValue = "";
+     }
+
+
+
+	 
+	 if((($appStatus =='VERIFIED_BY_ADJUDICATOR') || ($appStatus =='REG_COMPLETED')) && (($val['facialIDEMRVerified']=='true')  && ($val['facialIDDLVerified'] == 'true')) &&  ($val['endTime'] >0 )){ 
+		 $facialIDEMRVerified = '<input type="checkbox" name="verified" value="verified" checked="checked" disabled="disabled">';
+         $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" '.$disabledValue.'>';
+	}
+  else if(($appStatus !='VERIFIED_BY_ADJUDICATOR') && (($val['facialIDEMRVerified']=='true') && ($val['facialIDDLVerified'] == 'false')) &&  ($val['endTime'] >=0 )){
+
+        $facialIDEMRVerified ='<input name="idverified" value="Verify ID" class="verifiedids" id="'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" '.$disabledValue.'>';                          
+        $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" disabled>';
+   }
+
+
+ else if($appStatus =='COMPLETED'){
+			 
+		 $facialIDEMRVerified = '<input type="checkbox" name="verified" value="verified" checked="checked" disabled="disabled">' ;
+	     $checkin = '<input name="checkout" class="checkout"  value="Checkout" id="admin_'.$val['applicationId'].'"  data-appid="'.$insuraceData.'" type="button" '.$disabledValue.'>';
+    } 
+	
+	
+ else if($appStatus =='CHECK_OUT_COMPLETED'){
+			 
+	 $facialIDEMRVerified = '<input type="checkbox" name="verified" value="verified" checked="checked" disabled="disabled">' ;
+     $checkin = '<input type="text" name="appid"  value="Completed" id="'.$val['applicationId'].'" data-appid="'.$insuraceData.'" readonly="false" style="color:green;border:none;background:none">';
+    }
+	
+  else if((($val['facialIDEMRVerified']=='false') || ($val['facialIDDLVerified'] == 'false')) &&  ($val['endTime'] >=0)){
+		$facialIDEMRVerified ='<input name="idverified" value="Verify ID" class="verifiedids" id="'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" '.$disabledValue.'>';              
+        $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" disabled>';
+	}
+ 
+	else if((($val['facialIDEMRVerified']=='true') || ($val['facialIDDLVerified'] == 'true')) && ($val['endTime'] ==0)){
+		$facialIDEMRVerified ='<input type="checkbox" name="verified" value="verified" checked="checked" disabled="disabled">';              
+        $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" disabled>';
+	}
+	
+     else if((($val['facialIDEMRVerified']=='true') && ($val['facialIDDLVerified']=='true')) &&  ($val['endTime']>0)){ 
+		$facialIDEMRVerified ='<input type="checkbox" name="verified" value="verified" checked="checked" disabled="disabled">';              
+        $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" '.$disabledValue.'>';
+	  }
+  
+  
+  else {
+		 $facialIDEMRVerified =  '<input name="idverified" value="Facial Status Pending" class="verifiedids" id="'.$val['applicationId'].'" type="button" disabled>';
+         $checkin = '<input name="checkin" class="checkins" value="Check In" id="admin_'.$val['applicationId'].'" data-appid="'.$insuraceData.'" type="button" disabled>';
+	}  
+
+   // watchdog("SESSION TIMEZONE",print_r($_SESSION['lcl_timezone'],true));
+	if(isset($_SESSION['lcl_timezone'])){
+		date_default_timezone_set($_SESSION['lcl_timezone']);
+	}
+    //date_default_timezone_set($timeZone) ;
+   //date_default_timezone_set('Asia/Kolkata') ;
+	//watchdog("localtimezone",print_r(date_default_timezone_get(),true));
+	$starttime = (!empty($val['startTime'])) ? $val['startTime'] : '';
+	if(!empty($starttime)){
+		$starttime = date('Y-m-d H:i:s',($starttime/1000));
+		$starttime = new DateTime($starttime);
+		$startTime = $starttime->format('H:i:s');
+		
+		$createdDate = date('d-m-Y',($val['startTime']/1000));
+		$createdDate = new DateTime($createdDate);
+		$createdDate = $createdDate->format('m-d-Y');
+	 }
+	
+   $endtime = (!empty($val['endTime'])) ? $val['endTime'] : '';
+    if(!empty($endtime)){
+	    $endtime = date('Y-m-d H:i:s',($endtime/1000));
+		$endtime = new DateTime($endtime);
+		$endtime = $endtime->format('H:i:s');
+		$lapseEndTime = date('Y-m-d H:i:s',($endtime/1000));
+	 } else {
+		$endtime = '';
+	 }
+      
+    $checkInTime = (!empty($val['checkInTime'])) ? $val['checkInTime'] : '';
+    if(!empty($checkInTime)){
+	    $checkInTime = date('Y-m-d H:i:s',($checkInTime/1000));
+		$checkInTime = new DateTime($checkInTime);
+		$checkInTime = $checkInTime->format('H:i:s');
+
+	 } else {
+		$checkInTime = '';
+	 }
+    
+	/*if(!empty($lapseCheckinTime)){
+	 	$current_time = $lapseCheckinTime;
+	 } else {
+	 	//$currentDate = date('Y-m-d H:i:s', time());
+	 	$current_time= date('H:i:s');
+	 }  */
+   
+   if((empty($endtime)) && (empty($checkInTime))){
+	     	$runningTime = '00-00-00';
+   }
+   else if (!empty($val['reasonCheckInFailure'])){
+      $runningTime = '00-00-00';
+   }
+
+    else if((!empty($endtime)) && (empty($checkInTime))) 
+     {
+	   	/*
+        $current_time= date('H:i:s');
+	   	$time1 = strtotime("1980-01-01 $endtime");
+	    $time2 = strtotime("1980-01-01 $current_time");
+	    
+	    if ($time2 < $time1) {
+	        $time2 += 86400;
+	    }
+	    $runningTime =  date("H:i:s", strtotime("1980-01-01 00:00:00") + ($time2 - $time1));*/
+	  $bigdate = date_create(date('Y-m-d H:i:s'));
+      $smallDate = date_create(date('Y-m-d H:i:s',($val['endTime']/1000))); 
+      
+       $diff=date_diff($bigdate,$smallDate );
+       $runningTime = $diff->h.':'.$diff->i.':'.$diff->s;
+        $runningTime = '';
+		if($diff->h!=0){
+		  $runningTime.=sprintf("%02d", $diff->h).':';
+		}else {
+		   $runningTime.='00:';
+		}
+		if($diff->i!=0){
+		  $runningTime.=sprintf("%02d", $diff->i).':';
+		}else {
+		   $runningTime.='00:';
+		}
+	    $runningTime.=sprintf("%02d", $diff->s);  
+
+    }
+
+  
+
+
+
+   else {
+
+	    /*$time1 = strtotime("1980-01-01 $lapseCheckinTime");
+	    $time2 = strtotime("1980-01-01 $endtime");
+	    
+	    if ($time2 < $time1) {
+	        $time2 += 86400;
+	    }
+	    $runningTime =  date("H-i-s", strtotime("1980-01-01 00:00:00") + ($time2 - $time1));*/
+	      $bigdate =   date_create(date('Y-m-d H:i:s',($val['checkInTime']/1000))); 
+	      $smallDate = date_create(date('Y-m-d H:i:s',($val['endTime']/1000)));
+	      $diff=date_diff($bigdate,$smallDate ); 
+	     // $runningTime = $diff->h.'-'.$diff->i.'-'.$diff->s;
+           $runningTime = '';
+			if($diff->h!=0){
+			  $runningTime.=sprintf("%02d", $diff->h).'-';
+			}else {
+			   $runningTime.='00-';
+			}
+			if($diff->i!=0){
+			  $runningTime.=sprintf("%02d", $diff->i).'-';
+			}else {
+			   $runningTime.='00-';
+			} 
+			$runningTime.=sprintf("%02d", $diff->s); 	     
+      
+	   }
+
+
+
+  if(!empty($val['checkInTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}	
+		$checkInTime = date('Y-m-d H:i:s',($val['checkInTime']/1000));
+		$checkInTime = new DateTime($checkInTime);
+		$checkInTime = $checkInTime->format('H:i:s');
+  } else {
+	  
+	  $checkInTime = '00:00:00';
+	  
+  }
+  
+  if(!empty($val['checkOutTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}
+		$checkOutTime = date('Y-m-d H:i:s',($val['checkOutTime']/1000));
+		$checkOutTime = new DateTime($checkOutTime);
+		$checkOutTime = $checkOutTime->format('H:i:s');
+  } else { $checkOutTime = '00:00:00';}
+   $facilityArray = taxonomy_term_load($val['facilityId']);
+   
+   // Continue application
+
+  
+  
+   if(($appStatus != "CHECK_OUT_COMPLETED") || (empty($val['reasonCheckInFailure']))){ 
+        $continueapp = '<a href="check_appointment/'.$val['applicationId'].'/'.$val['patientId'].'" target="_blank"><button type="button" id="contineapp_'.$val['applicationId'].' name="contineapp">Appointment</button></a>';
+   }
+
+
+
+
+
+ 
+ if((in_array('administrator', $user->roles)) || (in_array('wiphy_adjudicator_admin', $user->roles))) {
+   if(isset($val['updateTime'])){
+	  
+	   
+	if((!empty($val['applicationData']['biographic']['name']['firstName'])) ||  (!empty($val['applicationData']['biographic']['name']['lastName']))){
+     $val_update_time_sec = round($val['updateTime'] / 1000);
+     $row[$i]['applicationId'] = (!empty($val['applicationId'])) ? $val['applicationId'] : '';		
+		 $row[$i]['facility_name'] =  $facilityArray->name;
+		 $row[$i]['firstname'] = (!empty($val['applicationData']['biographic']['name']['firstName'])) ? fnDecrypt($val['applicationData']['biographic']['name']['firstName']) : ''; 
+		 $row[$i]['lastname'] = (!empty($val['applicationData']['biographic']['name']['lastName'])) ? substr(fnDecrypt($val['applicationData']['biographic']['name']['lastName']),0,1) : ''; 
+		 $row[$i]['created_date'] = $createdDate; 
+		 $row[$i]['starttime'] = $startTime; 
+		 $row[$i]['endTime'] = $endtime;
+		 $row[$i]['check_in'] = $checkInTime;
+		 $row[$i]['check_out'] = $checkOutTime;
+		 $row[$i]['wattingtime'] = $runningTime;
+		 $row[$i]['facialIDEMRVerified'] = $facialIDEMRVerified;
+		 $row[$i]['insurance_card'] = $insurance_card;
+		 $row[$i]['checkin_reason'] = $checkin_reason;
+		 $row[$i]['checkin'] = $checkin;
+     $row[$i]['continueapp'] = $continueapp;
+		 $row[$i]['updateTime'] =  $val_update_time_sec;
+		
+		 $i++;
+    }
+  }
+ }
+  if(in_array('adjudicator', $user->roles)) {
+	  
+	if(isset($val['updateTime'])){
+	   
+	if((!empty($val['applicationData']['biographic']['name']['firstName'])) ||  (!empty($val['applicationData']['biographic']['name']['lastName']))){   
+		 $val_update_time_sec = round($val['updateTime'] / 1000);
+		 $row[$i]['applicationId'] = (!empty($val['applicationId'])) ? $val['applicationId'] : '';
+		 $row[$i]['firstname'] = (!empty($val['applicationData']['biographic']['name']['firstName'])) ? fnDecrypt($val['applicationData']['biographic']['name']['firstName']) : ''; 
+		 $row[$i]['lastname'] = (!empty($val['applicationData']['biographic']['name']['lastName'])) ? substr(fnDecrypt($val['applicationData']['biographic']['name']['lastName']),0,1) : ''; 
+		 $row[$i]['created_date'] = $createdDate;
+		 $row[$i]['starttime'] = $startTime; 
+		 $row[$i]['facialIDEMRVerified'] = $facialIDEMRVerified;
+		 $row[$i]['insurance_card'] = $insurance_card;
+		 $row[$i]['check_in'] = $checkInTime;
+		 $row[$i]['check_out'] = $checkOutTime;
+		 $row[$i]['endTime'] = $endtime;
+		 $row[$i]['wattingtime'] = $runningTime;
+		 $row[$i]['checkin_reason'] = $checkin_reason;
+		 $row[$i]['checkin'] = $checkin;
+     //$row[$i]['continueapp'] = $continueapp;
+		 $row[$i]['updateTime'] =  $val_update_time_sec;
+		
+		
+		 $i++;
+  
+      }
+    }   
+   }	  
+ 
+ }				  
+	 //print '<pre>';
+	// print_r($row);
+ 
+ // For no record found 
+ if((in_array('administrator', $user->roles)) || (in_array('wiphy_adjudicator_admin', $user->roles))) {
+  if($row[0]['firstname'] != ''){
+	  $row = json_encode($row);
+	   $data1 = '{
+     "data":  
+    
+        '.$row.'
+   
+  }';
+   
+ }else {
+	$myarray = array('facility_name'=>'','firstname'=>'','lastname'=>'','starttime'=>'','endTime'=>'','facialIDEMRVerified'=>'','checkin'=>'','updateTime'=>'');
+	$row = json_encode($myarray);
+	  $data1 = '{
+     "data":  
+    
+        '.$row.'
+   
+    }';
+	 
+	 
+ }  
+  
+  echo $data1;
+  die;
+ }
+
+ if(in_array('adjudicator', $user->roles)) {
+
+     //if(count($row)>1){
+     if($row[0]['firstname']){
+	  $row = json_encode($row);
+	   $data1 = '{
+     "data":  
+    
+        '.$row.'
+   
+  }';
+   
+ }else {
+	$myarray = array('firstname'=>'','lastname'=>'','starttime'=>'','facialIDEMRVerified'=>'','endTime'=>'','checkin'=>'','updateTime'=>'',);
+	$row = json_encode($myarray);
+	  $data1 = '{
+     "data":  
+    
+        '.$row.'
+   
+    }';
+	 
+	 
+ }  
+  
+  echo $data1;
+  die;
+ 
+ }
+  
+}
+
+function fetch_wiphylambda_data($appID){
+	$serviceUrl = variable_get('details_api_url','');
+	$data = array("applicationId" => $appID);
+	$data_string = json_encode($data);  
+ 	$data_result= request_axeliacurlfetch($serviceUrl, $data_string);
+	return $data_result;
+}
+
+function request_wiphycurl($url, $data_string) 
+{
+ 	/*$ch = curl_init($url);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	//curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PATCH');
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array(variable_get('authentication_key_api','')));
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	$response = curl_exec($ch);
+  $statusCode = curl_getInfo($ch, CURLINFO_HTTP_CODE);
+	curl_close($ch);*/
+
+
+  $data = $data_string;
+  
+  $headers = array('Content-Type: application/json',
+                  variable_get('authentication_key_api',''));
+
+  $curl = curl_init();
+  curl_setopt($curl, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PATCH');
+  curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+  curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+  $response = curl_exec($curl);
+  curl_close($curl);
+  
+	
+	// Debug output of the response
+ 
+	$result = json_decode($response, TRUE);
+	return $result;
+}
+
+function request_axeliacurlfetch($url, $data_string) 
+{
+ 
+    $data_string_array = json_decode($data_string);
+    $url = $url.'?applicationId='.$data_string_array->applicationId;
+
+    $ch = curl_init();  
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch,CURLOPT_URL,$url);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/json'));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(variable_get('authentication_key_api','')));
+
+    $output=curl_exec($ch); 
+    
+   // Debug output of the response
+     //$statusCode = curl_getInfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $result = json_decode($output, TRUE);
+    return $result; 
+  
+ 
+}
+
+
+function fetch_wiphydata_by_status($appstatus,$dateFilter,$facilityId=null){
+	$serviceUrl = variable_get('list_api_url','');
+	
+	if(!empty($facilityId)){ 
+	$data = array("applicationStatus" => $appstatus, "facilityId"=>$facilityId, "dateFilter"=>$dateFilter);	
+	}else {  
+		$data = array("applicationStatus" => $appstatus,"dateFilter"=>$dateFilter);
+	}
+	 
+	$data_string = json_encode($data); 
+	 //print_r($data_string); die('++++');
+	$data_result= request_wiphydata_by_status($serviceUrl, $data_string);
+	return $data_result;
+}
+
+function request_wiphydata_by_status($url, $data_string) 
+{
+
+	/*$ch = curl_init($url);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	//curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_PUT, 1);
+  //curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array(variable_get('authentication_key_api','')));
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  
+	$response = curl_exec($ch);
+ 	curl_close($ch);
+
+   print  '<pre>';
+  var_dump($response);
+  die('---------------');*/
+	// Debug output of the response
+
+  $headers = array (
+         "Content-Type: application/json; charset=utf-8",
+         "Content-Length: " .strlen($data_string),
+          variable_get('authentication_key_api',''),    
+      );
+      
+     $channel = curl_init($url);
+     curl_setopt($channel, CURLOPT_RETURNTRANSFER, true);
+     curl_setopt($channel, CURLOPT_CUSTOMREQUEST, "PUT");
+     curl_setopt($channel, CURLOPT_HTTPHEADER, $headers);
+     curl_setopt($channel, CURLOPT_POSTFIELDS, $data_string);
+     //curl_setopt($channel, CURLOPT_SSL_VERIFYPEER, false);
+     curl_setopt($channel, CURLOPT_SSL_VERIFYHOST, 0);
+      curl_setopt($channel, CURLOPT_SSL_VERIFYPEER, 0);
+     //curl_setopt($channel, CURLOPT_CONNECTTIMEOUT, 10);
+    
+     $response = curl_exec($channel);
+     $statusCode = curl_getInfo($channel, CURLINFO_HTTP_CODE);
+     curl_close($channel);
+      //print '<pre>';
+      //print_r($response);
+      //die();
+
+
+ 
+  
+	 $result = json_decode($response, TRUE);
+     
+
+
+	 return $result;
+}
+
+
+function wiphy_adjudicator_action(){
+	module_load_include('inc', 'wiphyadjudication', 'wiphy_update_api.pages');
+    
+   
+ 
+	 
+	if($_POST['adjtype'] == 'facialIDEMRVerified') {
+		$appid = $_POST['appid'];
+		// update id verified section
+		call_lambda($_POST);
+		die;
+	}
+	
+	if($_POST['adjtype'] == 'checkins') {
+		$appid = $_POST['appid'];
+		// checkin verified section
+		$appid = $_POST['appid'];
+		// update id verified section
+		call_lambda($_POST);
+		die;
+		
+		
+	} 
+	if($_POST['adjtype'] == 'CHECK_OUT_COMPLETED') {
+		$appid = $_POST['appid'];
+		// checkin verified section
+		$appid = $_POST['appid'];
+		// update id verified section
+		call_lambda($_POST);
+		die;
+		
+		
+	}
+		if($_POST['adjtype'] == 'updateinsurance') {
+		$appid = $_POST['appid'];
+		// checkin verified section
+		$appid = $_POST['appid'];
+		// update id verified section
+		call_lambda($_POST);
+		die;
+	}
+
+  if($_POST['adjtype'] == 'checkinreason') {
+		 $appid = $_POST['appid'];
+		// update id verified section
+      
+
+ 
+		call_lambda($_POST);
+		die;
+	}
+
+
+
+$arr['appid'] =$_POST['appid'];
+echo json_encode($arr);	
+}
+/* drupal 7 hook_form_alter(&$form, &$form_state, $form_id)
+ * Telos Auto Login  hook_form_alter(&$form, &$form_state, $form_id)
+ */
+function wiphyadjudication_form_alter(&$form, $form_state, $form_id) {  
+	global $user;
+//	echo $form_id; //exit;
+	 if($form_id=="user_register_form"){
+      $form['#after_build'][] = 'wiphyadjudication_after_build';
+
+	 }   
+	if($form_id == "user_profile_form"){  
+       $form['#after_build'][] = 'wiphyadjudication_profileafter_build';
+ 
+	} 
+  
+}
+function wiphyadjudication_after_build($element, &$form_state){
+	 //print '<pre>';
+	 //print_r($form_state['values']);
+	// exit;
+     if($form_state['values']['roles'][6] == 6){  
+
+        $element['field_facility_id']['und']['0']['tid']['#required'] = 0;
+     }
+	return $element;
+}
+
+
+
+
+function wiphyadjudication_profileafter_build($element, &$form_state){
+	   if(in_array('wiphy_adjudicator_admin', $form_state['user']->roles)){
+         // unset facility dropdown
+         //$element['field_facility_id']['und']['0']['tid']['#required'] = 0;
+         unset($element['field_facility_id']);
+
+       }
+     
+	return $element;
+}
+/**
+ * Implements of hook_services_resources().
+ */
+ 
+function wiphyadjudication_services_resources() {
+  $api = array(
+	
+	'facility_portal' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'Facility Portal Api',
+		   'callback' => '_facility_portal',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),	
+	
+	
+		
+);
+
+  return $api;
+} 
+
+/* 
+
+API for Facility Portal 
+
+*/
+
+function _facility_portal($data){
+	 
+	
+	global $user;
+	$vocabulary = taxonomy_vocabulary_machine_name_load('facility');
+
+	$vocabulary_vid = $vocabulary->vid;
+	$terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+	
+	$facility_types = array();
+	$status_code = wiphy_status_code();
+	foreach($terms as $key=>$val){
+
+		$facility_types[$val->name] = $val->tid;
+		
+		
+		
+		
+		
+	}
+	try { 
+	//echo 
+		return array("status"=>"ok", "status_code"=>$status_code[0],"result"=>$facility_types);	
+	}
+	catch (Exception $e) {
+		return array("status"=>"failed","status_code"=>$status_code[1]);
+	}	
+}
+
+
+//////	
+function adjudication_decrypt() {
+$arr=array();
+$facilityArray = taxonomy_term_load($_POST['facilityId']);	
+if($_POST['firstname']){
+	$arr['firstname'] = fnDecrypt($_POST['firstname']);
+	
+}
+if($_POST['facilityId']){
+	$arr['facilityId'] = $_POST['facilityId'];
+	
+}
+if($_POST['lastname']){
+	$arr['lastname'] = substr(fnDecrypt($_POST['lastname']),0,1);
+	
+}
+if($_POST['applicationId']){
+	$arr['applicationId'] = $_POST['applicationId'];
+	
+}
+if(!empty($_POST['startTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}
+		$starttime = date('Y-m-d H:i:s',($_POST['startTime']/1000));
+		$starttime = new DateTime($starttime);
+		$startTime = $starttime->format('H:i:s');
+		$arr['startTime'] = $startTime;
+		
+		$createdDate = date('d-m-Y',($_POST['startTime']/1000));
+		$createdDate = new DateTime($createdDate);
+		$createdDate = $createdDate->format('m-d-Y');
+		$arr['createdDate'] = $createdDate;
+		
+  }
+	
+	if(!empty($_POST['endTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}
+		$endTime = date('Y-m-d H:i:s',($_POST['endTime']/1000));
+		$endTime = new DateTime($endTime);
+		$endTime = $endTime->format('H:i:s');
+		$arr['endTime'] = $endTime;
+  }
+  
+  if(!empty($_POST['checkInTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}
+		$checkInTime = date('Y-m-d H:i:s',($_POST['checkInTime']/1000));
+		$checkInTime = new DateTime($checkInTime);
+		$checkInTime = $checkInTime->format('H:i:s');
+		$arr['checkInTime'] = $checkInTime;
+  }
+  
+  if(!empty($_POST['checkOutTime'])){
+		if(isset($_SESSION['lcl_timezone'])){
+			date_default_timezone_set($_SESSION['lcl_timezone']);
+		}
+		$checkOutTime = date('Y-m-d H:i:s',($_POST['checkOutTime']/1000));
+		$checkOutTime = new DateTime($checkOutTime);
+		$checkOutTime = $checkOutTime->format('H:i:s');
+		$arr['checkOutTime'] = $checkOutTime;
+  }
+
+if($_POST['checkInTime'] > 0 ){
+$bigdate =   date_create(date('Y-m-d H:i:s',($_POST['checkInTime']/1000))); 
+$smallDate = date_create(date('Y-m-d H:i:s',($_POST['endTime']/1000)));
+$diff=date_diff($bigdate,$smallDate ); 
+// $runningTime = $diff->h.'-'.$diff->i.'-'.$diff->s;
+$runningTime = '';
+if($diff->h!=0){
+      $runningTime.=sprintf("%02d", $diff->h).':';
+}else {
+      $runningTime.='00:';
+}
+if($diff->i!=0){
+      $runningTime.=sprintf("%02d", $diff->i).':';
+}else {
+      $runningTime.='00:';
+} 
+$runningTime.=sprintf("%02d", $diff->s); 
+$arr['formatcheckInTime'] =$runningTime;
+}
+
+if($_POST['applicationStatus']){
+	   $arr['applicationStatus'] = fnDecrypt($_POST['applicationStatus']);
+	
+}	
+if($_POST['facialIDEMRVerified']){
+	   $arr['facialIDEMRVerified'] =$_POST['facialIDEMRVerified'];
+	
+}
+if($_POST['facialIDDLVerified']){
+	   $arr['facialIDDLVerified'] =$_POST['facialIDDLVerified'];
+	
+}
+if($_POST['insurance'] != null){
+	   $arr['insurance'] = 'yes';
+	}
+else {
+	$arr['insurance'] = 'no';
+ }
+    $arr['facility_name'] =  $facilityArray->name;
+    $arr['rawEndTime'] =  $_POST['endTime'];
+    $arr['rawcheckInTime'] = $_POST['checkInTime'];
+    $arr['rawcheckOutTime'] =$_POST['checkOutTime'];
+    $arr['insurance'] =$_POST['insurance'];
+    $arr['reasonCheckInFailure'] =$_POST['reasonCheckInFailure'];
+
+    echo json_encode($arr);
+    die();	
+}
+function wiphy_timezone(){
+	//watchdog("Wiphi Timezone called","Wiphi timezone called");
+
+	 $timezone_name = $_POST['timezone_offset_minutes'];  // $_GET['timezone_offset_minutes']
+	 date_default_timezone_set($timezone_name);
+	 $_SESSION['lcl_timezone'] = $timezone_name;
+	// watchdog("Set Timezone",date_default_timezone_get());
+	  echo $_POST['timezone_offset_minutes'];
+}
+/**
+ * Implements hook_user_login().
+ */
+function wiphyadjudication_user_login(&$edit, $account) {
+
+	if(in_array('adjudicator',$account->roles)){
+		$_GET['destination'] = 'adjudication-queue';
+  	}
+}
+/* hook_user_logout 
+*/
+function wiphyadjudication_user_logout($account){
+session_destroy();
+drupal_goto('user/login');
+}
+
+
+function getFacilityID(){
+	$title = 'Adjudication Queue';
+	global $user;
+	$userid = $user->uid;
+  $userdata = user_load($userid);
+
+    //check if the facility id is set is session
+        if($_SESSION['facID']!= 0 ){
+        	    $facilityIdTitle = $_SESSION['facID'];
+        }else {
+             if(in_array('adjudicator', $userdata->roles)) {		 
+        	    $facilityIdTitle = $userdata->field_facility_id['und'][0]['tid'];
+     	   }
+    }
+    $facility_id = taxonomy_term_load($facilityIdTitle);
+    $facility_name = $facility_id->name; 
+
+if(($_SESSION['facID']!= 0 ) || (isset($facility_name))){
+       // $facility_name = $title.' '.$facility_id->name;
+        
+    	if(!empty($facility_name)){
+    		 $facility_name = $title.' - '.$facility_id->name;
+    	 }
+	}else{
+		    $facility_name = $title;
+	}
+	
+ 
+	return $facility_name;
+}
+
+ function get_facility(){
+	global $user,$node, $language;
+      module_load_include('module', 'password_field', 'password_field');
+
+	  $vocabulary = taxonomy_vocabulary_machine_name_load('facility');
+
+	  $vocabulary_vid = $vocabulary->vid;
+	  $terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+	  $facility_types = array();
+	 
+    //$facilityArr['status_code'] = wiphy_status_code(); 
+    $status_code = wiphy_status_code();
+   //"status"=>"ok","status_code"=>$status_code[0]	
+	
+	  $i=0;
+	  foreach($terms as $key=>$val){
+ 
+		//$facility_types[$val->name] = $val->tid;
+     
+    		$facilityArr['result'][$i]['id'] = $val->tid; 
+        $facilityArr['result'][$i]['name'] = $val->name; 
+        $facilityArr['result'][$i]['permission_token'] = password_field_decrypt($val->field_facility_password['und'][0]['password_field']); 
+     
+    		$i++;
+	}
+	try { 
+	   $result = array_merge(array('status'=>"ok",'status_code'=>$status_code[0]),$facilityArr);
+	  //$resultarray =array("status"=>"ok", "status_code"=>$status_code[0],"result"=>$facility_types); 
+ 
+	   print json_encode($result);
+	  
+ 
+	  //print json_encode($resultarray);
+	
+ 
+      //return array("status"=>"ok", "status_code"=>$status_code[0],"result"=>$facility_types);	
+		 
+		
+	}
+	catch (Exception $e) {
+		$result = array("status"=>"failed","status_code"=>$status_code[1]);
+		print json_encode($result);
+	}	
+ 
+	 exit;
+ }
+function getFacilityTid(){
+	  if($_POST['facID']!=''){
+	  	$_SESSION['facID'] = $_POST['facID'];
+	  }
+	  //print '---------'.$_SESSION['facID'];
+	die;
+}
+
+function dateDiff($time1, $time2, $precision = 6) {
+    // If not numeric then convert texts to unix timestamps
+    if (!is_int($time1)) {
+      $time1 = strtotime($time1);
+    }
+    if (!is_int($time2)) {
+      $time2 = strtotime($time2);
+    }
+
+    // If time1 is bigger than time2
+    // Then swap time1 and time2
+    if ($time1 > $time2) {
+      $ttime = $time1;
+      $time1 = $time2;
+      $time2 = $ttime;
+    }
+
+    // Set up intervals and diffs arrays
+    $intervals = array('year','month','day','hour','minute','second');
+    $diffs = array();
+
+    // Loop thru all intervals
+    foreach ($intervals as $interval) {
+      // Create temp time from time1 and interval
+      $ttime = strtotime('+1 ' . $interval, $time1);
+      // Set initial values
+      $add = 1;
+      $looped = 0;
+      // Loop until temp time is smaller than time2
+      while ($time2 >= $ttime) {
+        // Create new temp time from time1 and interval
+        $add++;
+        $ttime = strtotime("+" . $add . " " . $interval, $time1);
+        $looped++;
+      }
+ 
+      $time1 = strtotime("+" . $looped . " " . $interval, $time1);
+      $diffs[$interval] = $looped;
+    }
+    
+    $count = 0;
+    $times = array();
+    // Loop thru all diffs
+    foreach ($diffs as $interval => $value) {
+      // Break if we have needed precission
+      if ($count >= $precision) {
+        break;
+      }
+      // Add value and interval 
+      // if value is bigger than 0
+      if ($value > 0) {
+        // Add s if value is not 1
+        if ($value != 1) {
+          $interval .= "s";
+        }
+        // Add value and interval to times array
+        $times[] = $value . " " . $interval;
+        $count++;
+      }
+    }
+
+    // Return string with times
+    return implode(", ", $times);
+  }
+  
+    function showinsurance(){
+	 //print_r($_POST);
+	 // Call lambda data
+	$insuraceDataTable = "<table>"; 
+	 
+	$insID = $_POST['insID'];
+	$insID = explode('_',$insID);
+	//print_r($insID);
+	//die;
+	
+	$insID = $insID[1];
+  $insuraceData = fetch_wiphylambda_data($insID);
+	$applicationID = $insuraceData['result'][0]['applicationId'];
+
+	foreach($insuraceData['result'] as $val){
+     if($val['insurance']){
+    // print_r($val['insurance']);
+     // if(!empty($val['insurance']) && $val['insurance']!=""){
+      if($val['insurance']!="b90Icitcv+XOucAfb2Edtg=="){ 
+            foreach($val['insurance'] as $key=>$isnData){
+       //if(!empty(trim($isnData))){
+       if(((trim($isnData))!="b90Icitcv+XOucAfb2Edtg==") && (!empty(trim($isnData)))){
+ 
+                 if(($key == 'reformattedImage') || ($key == 'reformattedImageTwo')){
+          // show image 
+          $isnData = '';
+ 
+          }else { 
+            $insuraceDataTable.= '<strong>'.ucfirst($key).' : </strong>'.fnDecrypt($isnData).'<br>';
+          }
+ 
+           }
+         }  
+        } 
+       $insuraceDataTable.= '<br><br><input type="button" name="ok" id="ok_'.$applicationID.'" value="Ok" class="insbtn">&nbsp;&nbsp;<input type="button" name="Not ok" id="notok_'.$applicationID.'" value="Not Ok"  class="insbtn">'; 
+     }
+     print $insuraceDataTable;
+     }
+  die;
+  
+ }
+ 
+ // added on 13-07-2017
+ 
+ function updateinstatus(){
+	 print_r($_POST);
+	 die;
+	 
+ }
+
+function showreasons(){
+	// added on 1-8-2017 checkin reason logic
+ 
+    $reasonID = explode("_",$_POST['reasonID']);
+    print $reasonID = $reasonID[1];
+    die;
+
+}
+
+ function wiphyadjudication_listing_form_reset($form, &$form_state) {
+  if ($_POST['op'] == 'Reset') {
+
+      $UTC = new DateTimeZone("UTC");
+	    $currentDate = date('Y-m-d 00:00:00');
+	    $currentDate = new DateTime($currentDate, $UTC);
+	    //$currentDate = date_timestamp_get($date);
+	    $finaldCurDate = ($currentDate->getTimestamp())*1000;
+	 
+  	  $_SESSION['fromDate'] = "";	
+  	  $_SESSION['startDate'] = $finaldCurDate;
+  	  $_SESSION['endDate'] = "";	   
+ 	  $_SESSION['days'] = 1;
+   }
+    //$form_state['rebuild'] = TRUE;
+ }  
+
+function fetch_iosapp(){
+   
+    
+
+  $vocabulary = taxonomy_vocabulary_machine_name_load('ios_app_version');
+
+  $vocabulary_vid = $vocabulary->vid;
+  $terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+  
+  
+  $facility_types = array();
+   
+    //$facilityArr['status_code'] = wiphy_status_code(); 
+    $status_code = wiphy_status_code();
+   //"status"=>"ok","status_code"=>$status_code[0]  
+  
+  $i=0;
+  
+  foreach($terms as $key=>$val){
+
+     // $termArray = taxonomy_term_load($val->tid);
+    //$facility_types[$val->name] = $val->tid;
+       if($val->field_appurl['und'][0]['value'] == ""){
+            $iosappArr['result'][$i]['url'] = "";
+       }else {
+            $iosappArr['result'][$i]['url'] = $val->field_appurl['und'][0]['value'];
+      }
+      if($val->field_appversion['und'][0]['value'] ==""){
+           $iosappArr['result'][$i]['version'] = "";
+      }else{
+            $iosappArr['result'][$i]['version'] = $val->field_appversion['und'][0]['value'];
+      }
+          
+         // $iosappArr['result'][$i]['url'] = $val->field_appurl['und'][0]['value'];  
+          $iosappArr['result'][$i]['environment'] = $val->name; 
+
+   
+      $i++;
+  }
+ 
+  try { 
+ 
+     $result = array_merge(array('status'=>"ok",'status_code'=>$status_code[0]),$iosappArr);
+    
+     print json_encode($result);
+     
+  }
+  catch (Exception $e) {
+    $result = array("status"=>"failed","status_code"=>$status_code[1]);
+    print json_encode($result);
+  } 
+ 
+   exit;
+ }

@@ -1,0 +1,4 @@
+name = Application Configuration
+description = "Application Configuration services code"
+package = Telos Custom
+core = "7.x" 

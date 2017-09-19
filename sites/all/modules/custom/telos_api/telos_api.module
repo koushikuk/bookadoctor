@@ -1,0 +1,115 @@
+<?php
+include_once("AES.php");
+/**
+ * Implements hook_permission().
+ */
+function telos_api_permission() {
+  return array(
+    'access api services content' => array(
+      'title' => t('Access content for the Telos Lambda API Services'),
+    )
+  );
+} 
+
+/**
+ * Implements hook_menu().
+ */
+function telos_api_menu() {
+
+	$items = array();
+	$items['tsa_appid'] = array(
+		'title' => 'Account information',
+		'page callback' => 'insert_appid',
+		'access arguments' => array('access api services content'),
+		'type' => MENU_NORMAL_ITEM,
+		'file' => 'telos_api.pages.inc',
+	);
+	return $items;
+}
+
+/**
+ * Implements hook_init().
+ */
+function telos_api_init() {
+	global $user;
+	global $base_url;
+	$path = current_path();
+	module_load_include('inc', 'telos_api', 'telos_api.pages');
+	
+}
+
+///////////////////////////Encrypt Function//////////////////////
+
+function fnEncrypt($sValue, $sSecretKey = null, $blockSize = null) {
+	$blockSize = 128;
+	$rawkey = "599A0718E7C9210856AE460AF887BA61";
+	$sSecretKey = hash("SHA256", $rawkey, true); //we want a 32 byte binary blob 
+	$aes = new AES($sValue, $sSecretKey, $blockSize);
+
+	$enc = $aes->encrypt();
+	return $enc;
+}
+
+
+///////////////////////////Decrypt Function//////////////////////
+
+function fnDecrypt($sValue, $sSecretKey = null, $blockSize = null) {
+	$blockSize = 128;
+	$rawkey = "599A0718E7C9210856AE460AF887BA61";
+	$sSecretKey = hash("SHA256", $rawkey, true); //we want a 32 byte binary blob 
+	$aes = new AES($sValue, $sSecretKey,$blockSize);
+    $aes->setData($sValue);
+	$dec=$aes->decrypt();
+    return $dec;
+}
+
+
+ ///////////////// Get APP ID ////////////////////////
+
+function get_app_id($user_id=null){
+	global $user;
+	$query = new EntityFieldQuery();
+	$query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'telos_appid')
+		->fieldCondition('field_userid', 'value', $user_id, '=');
+	$result = $query->execute();
+	
+	if (isset($result['node'])) {
+		$app_result = array_keys($result['node']);
+		$appRows = entity_load('node', $app_result);
+		
+		foreach($appRows as $rows){
+			$app_id = $rows->field_app_id['und'][0]['value'];
+		}
+		
+	}
+	return $app_id;
+}
+
+////////////////////////Fetch API call/////////////////////////////
+
+function fetch_lambda_data($appID){
+	$serviceUrl = 'https://telos-esvc-api.inadev.net/enrollmentservices-dev/application/details';
+	$data = array("applicationId" => $appID);
+	$data_string = json_encode($data);  
+	$data_result= request_curl($serviceUrl, $data_string);
+	return $data_result;
+}
+
+function request_curl($url, $data_string) 
+{
+	$ch = curl_init($url);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/json'));
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	$response = curl_exec($ch);
+	curl_close($ch);
+	
+	// Debug output of the response
+	
+	$result = json_decode($response, TRUE);
+	return $result;
+}

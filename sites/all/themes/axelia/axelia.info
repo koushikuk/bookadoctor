@@ -1,0 +1,50 @@
+name = Axelia
+description = 'Axelia Theme'
+package = Axlia
+core = 7.x
+screenshot = screenshot.png
+; Information added by Drupal.org packaging script on 2017-08-17
+version = "7.x-2.25"
+project = "Axlia"
+datestamp = "1432329281"
+
+
+
+
+; REQUIRED CORE REGIONS
+
+
+
+; ADDITIONAL REGIONS
+regions[content] = Content
+regions[menu] = Menu
+regions[breadcrumb] = Breadcrumb
+regions[header_first] = Header First
+regions[header_second] = Header Second
+regions[footer_first] = Footer First
+regions[footer_second] = Footer Second
+;;;;;;;;;;;;;;;;;;;;;
+;; Stylesheets
+;;;;;;;;;;;;;;;;;;;;;
+stylesheets[all][] = css/bootstrap.min.css
+stylesheets[all][] = css/style.css
+stylesheets[all][] = css/style.css.map
+stylesheets[all][] = css/stylesheet.css
+; ;----------------------------------
+; ; METHOD 1: Bootstrap Source Files
+; ;----------------------------------
+; 
+; ;;;;;;;;;;;;;;;;;;;;;
+; ;; Scripts
+; ;;;;;;;;;;;;;;;;;;;;;
+; 
+
+scripts[] = 'js/jquery.min.js'
+
+
+
+
+
+
+
+

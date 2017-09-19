@@ -1,0 +1,4 @@
+name = Workflow Configuration
+description = "Workflow Configuration services code"
+package = Telos Custom
+core = "7.x" 

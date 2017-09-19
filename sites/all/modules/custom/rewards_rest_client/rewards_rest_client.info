@@ -1,0 +1,4 @@
+name = Rewards REST Client
+description = "This modules handles all the rest API calls for rewards app"
+package =  Telos Rewards custom
+core = "7.x" 

@@ -1,0 +1,28 @@
+<html>
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        jQuery(function(){
+            var iosocket = io.connect('http://localhost:3000');
+            iosocket.on('connect', function () {
+                jQuery('#showmessage').append(jQuery('<li>Connected</li>'));
+                iosocket.on('message', function(message) {
+                    console.log(message); 
+                });
+                iosocket.on('disconnect', function() {
+                    jQuery('#showmessage').append('<li>Disconnected</li>');
+                });
+            });
+            
+        }(jQuery, $));
+    </script>
+</head>
+<body>
+Connection Status: <div id="showmessage"></div>
+<br />
+<input type="hidden" id="outgoingChatMessage">
+<br><br>
+<div id="adj_data"></div>
+</body>
+</html>

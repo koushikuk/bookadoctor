@@ -1,0 +1,387 @@
+<?php
+/* call appointment_category API */
+
+ /**
+ * Implements hook_permission().
+ */
+function appoitment_permission() {
+
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+ function  appointment_init(){
+ global $user;
+ 
+} 
+
+/**
+* Implements hook_form().
+*/
+ 
+ function appointment_menu() {
+    global $user;
+	
+    $items['appointment_details'] = array(
+     'title' => 'Appointment Details',
+      'description' => 'appoitment detail form',
+      'page callback' => 'drupal_get_form',
+  	  'page arguments' => array('appointment_form',2),
+  		'access arguments' => array('access content'),
+	);
+  
+     $items['getVisitPractice'] = array(
+      'title' => 'Appointment Details',
+      'description' => 'appoitment detail form',
+      'page callback' => 'getVisitPractice',
+      'page arguments' => array(''),
+      'access arguments' => array('access content'),
+  );
+
+
+
+
+   return $items;
+ }
+
+ function appointment_form($form, &$form_state){
+
+
+	 if(!empty($_POST['patientid'])){
+    $_SESSION['patientid'] = $_POST['patientid'];
+   }
+if(!empty($_POST['applicationid'])){
+    $_SESSION['applicationid'] = $_POST['applicationid'];
+   }
+
+
+   
+    
+
+
+
+
+
+	$visittypeArray = fetch_visit_type();
+	$visittypeDD = array();
+    foreach($visittypeArray['result'] as $value){
+		       $visittypeDD[$value['VisitTypeID']] = $value['Name'];
+    }
+ // practice location dropdown
+
+	$practicelocationArray = fetch_practice_location();
+	$practicelocationDD = array();
+     foreach($practicelocationArray['result'] as $value){  
+        $practicelocationDD[$value['LocationID']] = $value['Name'];
+        
+   }
+  
+ 
+ // Service location array
+   $vocabulary = taxonomy_vocabulary_machine_name_load('service_location');
+  $vocabulary_vid = $vocabulary->vid;
+  $terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+
+  
+  
+  
+	foreach($terms as $key=>$val){
+        $key = $val->tid;
+        $value = $val->name;
+           $service_locationDD[$value] = ucfirst($value); 
+
+    }
+
+// Call EMR SERVICE API for appointment category Listing
+    $appointment_category_value = appointment_category(); 
+	$appointment_category_type = $appointment_category_value['result']['Types'];
+	drupal_add_js(array('appointment' => array('appointment_category_type' => $appointment_category_type)), 'setting');	
+    $app_category = array();
+   foreach ($appointment_category_value['result']['Types'] as $appointment_category_val){
+	// $app_category[0] = '-Select Appointment Type-';  
+	 $app_category[$appointment_category_val['AppointmentCategoryID']] = $appointment_category_val['Name'];
+	
+  }
+
+  
+    $form['visit_type'] = array(
+      '#type' => 'select',
+      '#theme_wrappers' => array(),
+      '#options' =>  $visittypeDD,
+  	  '#default_value' => $visittypeDD[0],
+      '#required' => TRUE,
+  	  /*'#ajax' => array(
+        'callback' => 'ajax_location_callback',
+  	   'wrapper' => array('replace_div_1', 'replace_div_2'),
+      ),*/
+    );
+	 //replace_div_1
+  /*$form['element_to_be_replaced_1'] = array(
+    '#type' => 'select',
+    '#prefix' => '<div id="replace_div_1">',
+	  '#options' => get_pratices_location_values($form['visit_type']['#options'][$form_state['values']['visit_type']]),
+    '#suffix' => '</div>',
+  );
+
+
+ //... more form elements here
+
+  //replace_div_2
+  $form['element_to_be_replaced_2'] = array(
+    '#type' => 'select',
+    '#prefix' => '<div id="replace_div_2">',
+	'#options' => get_services_location_values($form['visit_type']['#options'][$form_state['values']['visit_type']]),
+    '#suffix' => '</div>',
+  );*/
+
+   $form['practice_location'] = array(
+    '#title' => 'Practice Location',
+    '#type' => 'select',
+    //'#value' => '',
+    '#required' => TRUE,
+    '#theme_wrappers' => array(),
+    '#options' =>  $practicelocationDD,
+    );
+  
+   $form['service_location'] = array(
+    '#title' => 'Visit Type',
+    '#type' => 'select',
+    //'#value' => '',
+    '#required' => TRUE,
+    '#theme_wrappers' => array(),
+    '#options' =>  $service_locationDD,
+    );
+
+
+
+
+	
+  // appointment category
+  $form['appointment_parent_category'] = array(
+    '#type' => 'select',
+	  '#title' => t("Appointment Category"),
+    '#theme_wrappers' => array(),
+    '#required' => TRUE,
+    '#options' =>  $app_category,
+	 '#default_value' => $app_category[0],
+    );	
+	$form['appointment_sub_category'] = array(
+	'#type' => 'select',
+	'#prefix' => '<div id="appointment-sub-category">',
+	'#suffix' => '</div>',
+	'#weight' => 5,
+    );
+  $form['patientid'] = array(
+    '#type' => 'hidden',
+    '#name' => 'patientid',
+    '#value' => $_SESSION['patientid'], 
+    );
+
+	 $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Continue',
+  );
+ return $form;
+ }
+  
+/* apportment _form submit */
+function appointment_form_submit($form, &$form_state){
+	
+  	$_SESSION['visit_type_id'] = $form_state['values']['visit_type'];
+  	$_SESSION['practice_location'] = $form_state['values']['practice_location'];
+  	$_SESSION['service_location'] = $form_state['values']['service_location'];
+  	$_SESSION['appointment_category_id'] = $form_state['values']['appointment_parent_category'];
+  	$_SESSION['appointment_type_id'] = $form_state['values']['appointment_sub_category'];
+    $form_state['redirect'] = 'careprovider_details';
+     
+ } 
+/* Location form ajax callback */ 
+function ajax_location_callback($form,$form_state){
+	 return array(
+    '#type' => 'ajax',
+    '#commands' => array(
+      ajax_command_replace("#replace_div_1", render($form['element_to_be_replaced_1'])),
+      ajax_command_replace("#replace_div_2", render($form['element_to_be_replaced_2']))
+    )
+  );
+} 
+/* Get Pratices  locaion Ajax callback */
+function get_pratices_location_values($selected_val){
+	    if($selected_val){
+	    $visit_type_query = new EntityFieldQuery(); 
+        $visit_type_query->entityCondition('entity_type', 'node')  
+
+        ->entityCondition('bundle', 'location_configuration')
+
+        ->fieldCondition('field_visit_type', 'value', $selected_val, '=');  
+
+        $visit_type_result = $visit_type_query->execute(); 
+
+        if (isset($visit_type_result['node'])) {
+
+          $visit_type_result_key = array_keys($visit_type_result['node']);   
+
+          $visit_type_resultsRows = entity_load('node', $visit_type_result_key); 
+		}
+		
+		foreach($visit_type_resultsRows as $visit_type_rows){ 
+		
+		 $location_arr[]=ucfirst($visit_type_rows->field_practice_location['und'][0]['value']);
+		 
+		}
+		
+		$practicelocationArray = fetch_practice_location();
+	    $practicelocationDD = array();
+	   foreach($practicelocationArray['result'] as $key=>$value){		   
+			   if(strtolower($location_arr)===strtolower($value['Name'])){
+				$practicelocationDD[$value['LocationID']] = $value['Name'];
+			  }
+			  if(strtolower($location_arr)!=strtolower($value['Name'])){
+			  $practicelocationDD[$value['LocationID']] = $value['Name'];
+			  }
+         }
+		
+		
+	return $practicelocationDD;
+	}else{
+		return array('-Select Pratices Location-');
+	}	
+	
+}
+/*  get services location callback */
+function get_services_location_values($selected_val){
+	    if($selected_val){
+	    $visit_type_query = new EntityFieldQuery(); 
+        $visit_type_query->entityCondition('entity_type', 'node')  
+
+        ->entityCondition('bundle', 'location_configuration')
+
+        ->fieldCondition('field_visit_type', 'value', $selected_val, '=');  
+
+        $visit_type_result = $visit_type_query->execute(); 
+
+        if (isset($visit_type_result['node'])) {
+
+          $visit_type_result_key = array_keys($visit_type_result['node']);   
+
+          $visit_type_resultsRows = entity_load('node', $visit_type_result_key); 
+		}
+		
+		foreach($visit_type_resultsRows as $visit_type_rows){ 
+		
+		 $location_arr[$visit_type_rows->field_service_location['und'][0]['value']]=ucfirst($visit_type_rows->field_service_location['und'][0]['value']);
+		 
+		}
+	return $location_arr;
+	}else{
+		return array('-Select Services Location-');
+	}	
+	
+}
+
+ 
+
+function appointment_category(){
+
+   $serviceUrl = variable_get('appointment_type','');
+   $data = array();
+   $data_string = json_encode($data);
+   $data_result = request_type($serviceUrl,$data_string);
+   return $data_result;
+}
+/* 
+ 
+
+ 
+function request_type($url) 
+{
+
+    $ch = curl_init();  
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch,CURLOPT_URL,$url);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/json'));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(variable_get('authentication_key_api','')));
+    $output=curl_exec($ch); 
+   // Debug output of the response
+
+   $result = json_decode($output, TRUE);
+   return $result;
+} */
+
+function appointment_theme($existing, $type, $theme, $path) {
+    $items['appointment_form'] = array(
+        'render element' => 'form',
+        'template' => 'appointment_detail',
+        'path' => drupal_get_path('module', 'appointment'),
+    );
+    return $items;
+}
+function getVisitPractice(){
+   $postValue = $_POST['option'];
+  
+   $applicationData = fetch_wiphylambda_data($_SESSION['applicationid']);
+
+        $facilityId = taxonomy_term_load($applicationData['result'][0]['facilityId']);
+
+        $facilityName = $facilityId->name;
+
+       //Get preconfigured location, visittype and practice location map
+
+        $visit_type_query = new EntityFieldQuery(); 
+        $visit_type_query->entityCondition('entity_type', 'node')  
+
+        ->entityCondition('bundle', 'location_configuration')
+
+        ->fieldCondition('field_physical_location', 'value', $facilityName, '=');  
+
+        $visit_type_result = $visit_type_query->execute(); 
+
+        if (isset($visit_type_result['node'])) {
+
+          $visit_type_result_key = array_keys($visit_type_result['node']);   
+
+          $visit_type_resultsRows = entity_load('node', $visit_type_result_key); 
+    }
+    $visit_type_result = $visit_type_query->execute();
+        
+    $pracloc ='';
+    foreach($visit_type_resultsRows as $visit_type_rows){   
+
+     if(strtolower($visit_type_rows->field_visit_type['und'][0]['value']) == strtolower($postValue)){
+      
+      // $setVisitType  = $visit_type_rows->field_visit_type['und'][0]['value'];
+       $setPracticeLocation = $visit_type_rows->field_practice_location['und'][0]['value'];
+
+
+
+     }
+ 
+      //$serviceLocation = $visit_type_rows->field_service_location['und'][0]['value']; 
+    }
+
+   // Generate practice location dropdown
+   $practicelocationArray = fetch_practice_location();
+    $practicelocationDD = array();
+    $pracloc.='<select id="edit-practice-location" name="practice_location" class="form-select required">';
+    $pracloc.='<option value="">- Select -</option>';
+     foreach($practicelocationArray['result'] as $value){  
+        //$practicelocationDD[$value['LocationID']] = $value['Name'];
+      
+     $pracloc.='<option value="'.$value['LocationID'].'"';
+     if($value['Name'] == $setPracticeLocation){
+      $pracloc.= 'selected = "selected"';
+     }
+   
+      $pracloc.='>'.$value['Name'].'</option>';
+ 
+   }
+    $pracloc.='</select>';
+
+     print   $pracloc;
+      
+  die;
+}

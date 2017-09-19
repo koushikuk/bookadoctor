@@ -1,0 +1,132 @@
+<?php 
+function saml_menu() {
+  $items['send_auth'] = array(
+    'title' => 'Send Auth',
+    'page callback' => 'send_auth',
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+	
+	$items['send_auth_link'] = array(
+    'title' => 'Send Auth',
+    'page callback' => 'send_auth_link',
+    'access arguments' => array('access content'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+  
+   $items['get_saml_resp'] = array(
+    'title' => 'Get SAML Resp',
+    'page callback' => 'get_saml_resp',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+  
+}
+
+function send_auth_link(){
+	$url = $GLOBALS['base_url'].'/send_auth';
+	return "<a href='".$url."' onclick='window.open(this.href, '_blank', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;'>Example</a>";
+}
+
+function send_auth(){
+    $xml_str= '<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_e9cb9113c8cea83c2e4a59e6e9e587882cb8e6070d" Version="2.0" IssueInstant="2017-03-07T05:36:33Z" Destination="https://telr-mkt-dev.inadev.net/simplesaml/saml2/idp/SSOService.php" AssertionConsumerServiceURL="https://dev.telr.com/get_saml_resp" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST">
+               <saml:Issuer>ssp_uid</saml:Issuer>
+               <samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" AllowCreate="true" />
+</samlp:AuthnRequest>';
+
+$xml_str2 = '<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_e9cb9113c8cea83c2e4a59e6e9e587882cb8e6070c" Version="2.0" IssueInstant="2017-03-07T05:36:33Z" Destination="http://local.drupal-sip.com:8080/simplesaml/saml2/idp/SSOService.php" AssertionConsumerServiceURL="http://dev.telr.com/get_saml_resp" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST">
+               <saml:Issuer>http://ssp-drupal.com/simplesaml/module.php/saml/sp/metadata.php/default-sp</saml:Issuer>
+               <samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" AllowCreate="true" />
+</samlp:AuthnRequest>';
+    
+    $msgStr = gzdeflate($xml_str);
+    
+    $msgStr = base64_encode($msgStr);
+    $msgStr = urlencode($msgStr);
+    $SAMLRequest=$msgStr.'&RelayState=' . urlencode('data=3');
+    header("Cache-Control: no-cache");
+    //drupal_goto('http://local.drupal-sip.com:8080/simplesaml/saml2/idp/SSOService.php?SAMLRequest='.$SAMLRequest);
+    header('Location:https://telr-mkt-dev.inadev.net/simplesaml/saml2/idp/SSOService.php?SAMLRequest='.$SAMLRequest);
+    
+}
+
+
+
+function get_saml_resp(){
+    $msg = $_POST['SAMLResponse'];
+    $msg = base64_decode($msg);
+    verify_signature($msg);
+    $domDocument = new DOMDocument();
+    $options = 2060;
+    $domDocument=      new DOMDocument();
+    $loaded = $domDocument->loadXML($msg, $options);
+    $xml = $domDocument->firstChild;
+    
+    $signatureElement = $domDocument->getElementsByTagName('SignatureValue')[0];
+    $signatureValue = base64_decode(trim($signatureElement->nodeValue));
+    
+    $signatureCertificate = $domDocument->getElementsByTagName('X509Certificate')[0];
+    $signatureInfo = $domDocument->getElementsByTagName('SignedInfo')[0];
+
+    
+    $pemdata = file_get_contents(drupal_get_path('module', 'views_external').'/saml.crt');
+    $public_key = openssl_pkey_get_public($pemdata);
+    $signatureInfo = trim($domDocument->saveXML($signatureInfo));
+
+    
+    $val = openssl_verify($signatureInfo, $signatureValue, $public_key,1); 
+    
+   
+    
+}
+
+
+
+function verify_signature($xmlString){
+    $xmlDoc = new DOMDocument();
+    $xmlDoc->loadXML($xmlString);
+
+    $xpath = new DOMXPath($xmlDoc);
+    $xpath->registerNamespace('secdsig', 'http://www.w3.org/2000/09/xmldsig#');
+
+    // fetch Signature node from XML
+    $query = ".//secdsig:Signature";
+    $nodeset = $xpath->query($query, $xmlDoc);
+    $signatureNode = $nodeset->item(0);
+
+    // fetch SignedInfo node from XML
+    $query = "./secdsig:SignedInfo";
+    $nodeset = $xpath->query($query, $signatureNode);
+    $signedInfoNode = $nodeset->item(0);
+
+    // canonicalize SignedInfo using the method descried in
+    // ./secdsig:SignedInfo/secdsig:CanonicalizationMethod/@Algorithm
+    $signedInfoNodeCanonicalized = $signedInfoNode->C14N(true, false);
+
+    // fetch the x509 certificate from XML
+    $query = 'string(./secdsig:KeyInfo/secdsig:X509Data/secdsig:X509Certificate)';
+    $x509cert = $xpath->evaluate($query, $signatureNode);
+		
+		$uid = 
+		
+    // we have to re-wrap the certificate from XML to respect the PEM standard
+    $x509cert = "-----BEGIN CERTIFICATE-----\n" .
+						chunk_split($x509cert, 64) .
+						"-----END CERTIFICATE-----\n";;
+    // fetch public key from x509 certificate
+    $publicKey = openssl_get_publickey($x509cert);
+
+    // fetch the signature from XML
+    $query = 'string(./secdsig:SignatureValue)';
+    $signature = base64_decode($xpath->evaluate($query, $signatureNode));
+
+    // verify the signature
+    if(openssl_verify($signedInfoNodeCanonicalized, $signature, $publicKey)){
+        echo 'success';
+    } else{
+        echo 'fail';
+    }
+}
+

@@ -1,0 +1,4 @@
+name = Telos Rewards Reminder Mails
+description = Reminder Mails
+package = Telos Rewards Custom
+core = 7.x

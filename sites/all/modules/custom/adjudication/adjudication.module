@@ -1,0 +1,220 @@
+<?php
+
+
+ /**
+ * Implements hook_permission().
+ */
+function adjudication_permission() {
+  return array( 
+    'access_adjudication' => array(
+      'title' => t('access adjudication section'),
+    )
+  );
+} 
+
+/**
+ * Implements hook_init().
+ * Provides an explanation.
+ */
+function  adjudication_init(){
+drupal_add_css(drupal_get_path('module', 'adjudication')."/css/custom.css");	
+drupal_add_js(drupal_get_path('module', 'adjudication')."/js/custom.js");
+drupal_add_js(drupal_get_path('module', 'adjudication')."/js/ziehharmonika.js");
+drupal_add_css(drupal_get_path('module', 'adjudication')."/css/ziehharmonika.css");
+}
+
+/**
+ * Implements hook_form().
+ * Provides an explanation.
+ */
+ 
+ function adjudication_menu() {
+	    $items['admin/manual_facial_adjudication'] = array(
+		'title' => 'Manual Facial Adjudicaton', 
+		'description' => 'Manual facial adjudication page.',
+	   'page callback' => 'manual_facial_adjudication',
+		//'access callback' => FALSE,
+		'access arguments' => array('access content'),
+		'file' =>'manual_facial_adjudication.inc',
+	);
+
+  $items['adjudication_queue'] = array(
+		'title' => 'Adjudication Queue', 
+		'description' => 'Listing of all available adjudication record in queue',
+		'page callback' => 'adjudication_listing',
+		'page arguments' => '',
+		'access arguments' => array('access content'),
+	);
+
+ $items['adjudication_datasource'] = array(
+		'title' => 'Adjudication data', 
+		'description' => 'adjudication data source',
+		'page callback' => 'adjudication_datasource',
+		'page arguments' => '',
+		'access arguments' => array('access content'),
+	);
+	$items['admin/eligibility_adjudication'] = array(
+		'title' => 'Eligibility adjudication', 
+		'description' => 'Eligibility adjudication',
+		'page callback' => 'eligibility_adjudication',
+		'page arguments' => '',
+		'access arguments' => array('access content'),
+		'file' =>'manual_facial_adjudication.inc',
+		
+	);
+   $items['manual_fac_adj_submit'] = array(
+     'title' => 'manual facial adjudicatio submit',
+     'description' => 'manual facial adjudication submit',
+     'page callback' => 'manual_fac_adj_submit',
+     'page arguments' => '',
+	 'access arguments' => array('access content'),
+ 
+   	);
+	$items['adjudication_encdecrypt'] = array(
+     'title' => 'manual facial adjudicatio submit',
+     'description' => 'Adjudication data encrypt and decrypt',
+     'page callback' => 'adjudication_encdecrypt',
+     'page arguments' => '',
+	 'access arguments' => array('access content'),
+ 
+   	);
+	
+   return $items;
+ }
+function adjudication_listing(){
+ 	drupal_add_js(drupal_get_path('module', 'adjudication')."/js/jquery.dataTables.js");
+    drupal_add_css(drupal_get_path('module', 'adjudication')."/css/jquery.dataTables.css");
+ 	return theme("adjudication_listing",array('data'=>$data));
+ }
+
+function eligibility_adjudication(){
+$data = return_driver_licence_data();
+return theme("eligibility_adjudication",array('data'=>$data));
+}
+ function manual_facial_adjudication(){
+$data = return_driver_licence_data();
+return theme("manual_facial_adjudication",array('data'=>$data));
+ }
+
+function adjudication_theme($existing, $type, $theme, $path) {
+	   $items['eligibility_adjudication'] = array(
+        'render element' => 'form',
+        'template' => 'template/eligibility_adjudication',
+    );
+		
+		$items['manual_facial_adjudication'] = array(
+        'render element' => 'form',
+        'template' => 'template/manual_facial_adjudication',
+        //'path' => drupal_get_path('theme', 'telosid') . '/templates',
+    );
+		
+     $items['adjudication_listing'] = array(
+        'template' => 'adjudication_listing',
+        'variables' => array(
+	    'results' => NULL,
+	      ),
+    );
+   return $items;
+}
+
+function adjudication_datasource(){
+ 
+  $data = '{
+  "data": [
+    [
+      "Tiger Nixon",
+      "Tsa Pre",
+      "10",
+      "Mark for program eligibility",
+      "4523525"
+    ],
+    [
+      "Garrett Winters",
+      "Hazmat",
+      "7",
+      "Mark for facial Id",
+      "56363667976" 
+    ],
+    [
+      "Ashton Cox",
+      "Twic",
+      "13",
+      "Mark for facial Id",
+      "54654656644" 
+    ],
+    [
+      "Cedric Kelly",
+      "Tsa Pre",
+      "8",
+      "Mark for program eligibility",
+      "343266547" 
+    ],
+    [
+      "Airi Satou",
+      "Hazmat",
+      "15",
+      "Mark for facial Id",
+      "6574766353" 
+    ],
+    [
+      "Brielle Williamson",
+      "Twic",
+      "6",
+      "Mark for program eligibility",
+      "55477463453" 
+    ],
+    [
+      "Herrod Chandler",
+      "Hazmat",
+      "9",
+      "Mark for facial Id",
+      "435232432" 
+    ],
+    [
+      "Rhona Davidson",
+      "Tsa Pre",
+      "10",
+      "Mark for program eligibility",
+      "4534535543" 
+    ],
+    [
+      "Colleen Hurst",
+      "Tsa Pre",
+      "12",
+      "Mark for facial Id",
+      "7464645565" 
+    ],
+    [
+      "Sonya Frost",
+      "Hazmat",
+      "16",
+      "Mark for Program eligibility",
+      "2242343432" 
+    ]
+    
+  ]
+  }';
+  echo $data;
+  die;
+}
+
+function manual_fac_adj_submit(){
+	print '<pre>';
+	print_r($_POST);
+	die('---------------------');
+  
+}
+function adjudication_encdecrypt(){
+	/*print '<pre>';
+	print_r($_REQUEST);
+	*/
+	echo $query1 = fnDecrypt($_REQUEST['query1']);
+	
+	 
+	
+	//$data['dl_first_name'] = (!empty($result['applicationData']['biographic']['name']['firstName'])) ? fnDecrypt($result['applicationData']['biographic']['name']['firstName']) : '';
+	
+	 
+	die;
+	
+}

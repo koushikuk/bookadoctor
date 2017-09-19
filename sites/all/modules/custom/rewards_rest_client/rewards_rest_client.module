@@ -1,0 +1,190 @@
+<?php 
+ /* Implements of hook_services_resources().
+ */
+function rewards_rest_client_services_resources() {
+  $api = array(
+'web_scrape' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'web_scrape API',
+		   'callback' => '_web_scrape',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),	
+ 
+);
+
+  return $api;
+}
+
+
+function _web_scrape($data){
+    $proram_name = strtolower($data['program_name']);  
+    $firstname = $data['first_name'];
+	 if(!isset($data['middle_name'])){
+        $middlename = 'NMN';
+	 }else {
+	 	$middlename = $data['middle_name'];
+	 }
+	 $lastname =  $data['last_name'];
+	 $date_of_birth =  $data['dob'];
+	 $email =  $data['email'];
+	 $phone_country_code1 =  $data['phone_country_code1'];
+	 $phone_country_code2 =  $data['phone_country_code2'];
+	 $phone1 =  $data['phone1'];
+	 $phone2 =  $data['phone2'];
+     
+    if($proram_name == "tsapre"){
+        $curlurl = "https://universalenroll.dhs.gov/workflows/service-status?servicecode=11115V";
+    }
+    else if($proram_name == "hazmat"){
+        $curlurl = "https://universalenroll.dhs.gov/workflows/service-status?servicecode=111168";
+    }
+    else if($proram_name == "twic"){
+        $curlurl = "https://universalenroll.dhs.gov/workflows/service-status?servicecode=111111";
+    } else {
+        return array("status"=>false,"message"=> "Invalid program.");
+        die();
+    }
+
+
+
+
+    if(empty($data)) {
+		return array("status"=>false,"message"=> "Invalid credentials.");
+	}	
+	
+
+
+   try {
+	 $ch = curl_init();
+     
+    curl_setopt($ch, CURLOPT_URL, $curlurl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+    curl_setopt($ch, CURLOPT_HEADER, 1);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+    $headers = array();
+    $headers[] = "Accept-Encoding: gzip, deflate, sdch, br";
+    $headers[] = "Accept-Language: en-GB,en-US;q=0.8,en;q=0.6";
+    $headers[] = "Upgrade-Insecure-Requests: 1";
+    $headers[] = "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
+    $headers[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
+    $headers[] = "Cache-Control: max-age=0";
+    $headers[] = "If-None-Match: W/\"199d-135009629\"";
+    $headers[] = "Connection: keep-alive";
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $result = curl_exec($ch);
+    if (curl_errno($ch)) {
+        //echo 'Error:' . curl_error($ch);die();
+        echo 'Error:' . curl_error($ch);
+    }
+
+    
+    $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+    $header = substr($result, 0, $header_size);
+    if(preg_match_all('/set-cookie:[\s]([^;]+)/', $header, $matches)){
+        $cookies = $matches[1];
+    }
+    if(preg_match_all('/Set-Cookie:[\s]([^;]+)/', $header, $matches)){
+        $cookies = array_merge($cookies,$matches[1]);
+    }
+
+    $cookie_string = implode(';',$cookies);
+
+    curl_close($ch);
+
+    $doc = new DOMDocument();
+    $doc->loadHTML($result);
+    $xp = new DOMXpath($doc);
+    $nodes = $xp->query('//input[@name="_csrf"]');
+    $node = $nodes->item(0);
+    $csrf_token = $node->getAttribute('value');
+    $csrf_token = trim($csrf_token);
+
+
+    $post = array(
+        '_csrf'=>$csrf_token,
+        'searchType'=>'on',
+        'applicant[searchType]'=>'name',
+        'applicant[firstName]'=>$firstname,
+        'applicant[middleName]'=>$middlename,
+        'applicant[lastName]'=>$lastname,
+        'applicant[dob]'=>$date_of_birth,
+        'applicant[email]'=>$email,
+        'applicant[phone1][codeId]'=>$phone_country_code1,
+        'applicant[phone1][number]'=>$phone1,
+        'applicant[phone2][codeId]'=>$phone_country_code2,
+        'applicant[phone2][number]'=>$phone2,
+        'applicant[ueid]'=>'',
+        'applicant[dob2]'=>'',
+        'humanityTest'=>'',
+        'step' => 'search',
+
+    );
+
+
+    $query = http_build_query($post);
+
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $curlurl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $query);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+    $headers = array();
+    $headers[] = "Cookie: ".$cookie_string;
+    $headers[] = "Origin: https://universalenroll.dhs.gov";
+    $headers[] = "Accept-Encoding: gzip, deflate, br";
+    $headers[] = "Accept-Language: en-GB,en-US;q=0.8,en;q=0.6";
+    $headers[] = "Upgrade-Insecure-Requests: 1";
+    $headers[] = "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
+    $headers[] = "Content-Type: application/x-www-form-urlencoded";
+    $headers[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
+    $headers[] = "Cache-Control: max-age=0";
+    $headers[] = "Referer: https://universalenroll.dhs.gov/workflows/service-status?serviceCode=11115V";
+    $headers[] = "Connection: keep-alive";
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $result = curl_exec($ch);
+    if (curl_errno($ch)) {
+        echo 'Error:' . curl_error($ch);
+    }
+    curl_close ($ch);
+
+    //echo $result;
+    $results = json_decode($result,true);
+   
+	    if($results['reGet'] == 1){
+	    	return array("status"=>true);
+	    }else {
+	    	return array("status"=>false,"message"=> "Invalid user.");
+	    }
+
+    }
+    catch(Exception $e){
+    	return array("status"=>false,"message"=> "Unable to retrieve status.");
+    }
+	 
+}

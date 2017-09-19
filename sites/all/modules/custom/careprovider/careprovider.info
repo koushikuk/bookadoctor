@@ -1,0 +1,4 @@
+name = Care Provider
+description =  This module is used to manage care provider  
+package = Axelia Custom
+core = 7.x

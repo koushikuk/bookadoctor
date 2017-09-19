@@ -1,0 +1,116 @@
+<?php
+/* call appointment_category API */
+
+ /**
+ * Implements hook_permission().
+ */
+function careprovider_permission() {
+
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+ function  careprovider_init(){
+ global $user;
+ drupal_add_js(drupal_get_path('module', 'careprovider').'/js/careprovider.js');
+ drupal_add_js('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js');
+} 
+
+/**
+* Implements hook_form().
+*/
+ 
+ function careprovider_menu() {
+    global $user;
+	
+    $items['careprovider_details'] = array(
+     'title' => 'Care provider Details',
+      'description' => 'Care provier details section',
+      'page callback' => 'care_provier_details',
+      'page arguments' => array(''),
+  		'access arguments' => array('access content'),
+	  );
+  
+   $items['getscheduleresource'] = array(
+     'title' => 'schedule resource',
+      'description' => 'Get schedule resource',
+      'page callback' => 'getscheduleresource',
+      'page arguments' => array(''),
+      'access arguments' => array('access content'),
+    );
+   return $items;
+ }
+
+function care_provier_details(){
+   
+   $appointmentScheduleResourceUrl = variable_get('appointment_schedule_resource','');
+   $data_result = request_type($appointmentScheduleResourceUrl);
+
+//$data_result = array(1=>'one', 2=> 'two', 3=> 'three', 4=>'four');
+return theme("careprovider_details", array("carepdata"=>$data_result));
+} 
+ 
+ 
+ function careprovider_theme(){
+    return array(
+    'careprovider_details' => array(
+      'path' => drupal_get_path('module', 'careprovider'),
+      'template' => 'careprovider_details',
+      'variables' => array(
+      'results' => NULL,
+      ),
+  ),
+ );
+}
+ 
+function getscheduleresource(){
+
+  //Fetch care provider data
+   $careproviderUrl = variable_get('billable_care_provider','');
+   $care_provider_result = request_type($careproviderUrl);
+
+   $postValue = explode('|',$_POST['careprovalue']);
+
+   $CareproviderCategoryID = $postValue[2];
+   $CareproviderID = $postValue[1];
+   $OwnerCareProviderID = $postValue[0];
+
+
+
+   //$care_provider_result  = json_decode($care_provider_result);
+    // Appointment resource
+     
+    foreach($care_provider_result['result'] as $val){
+      $allCareProviderIDArray[] = $val['CareProviderID'];
+    } 
+  if(in_array($OwnerCareProviderID, $allCareProviderIDArray)){
+        $_SESSION['CareproviderCategoryID'] = $CareproviderCategoryID;
+        $_SESSION['CareproviderID'] = $CareproviderID;
+        $_SESSION['OwnerCareProviderID'] = $OwnerCareProviderID;
+        $showmodal = "false";
+
+  }else {
+     $careproviderUrl = variable_get('billable_care_provider','');
+     $care_provider_result = request_type($careproviderUrl); 
+     $showmodal = "true";
+    //Billable care provider popup
+   
+
+ print  $showmodal;
+
+
+
+
+  }
+ 
+ // print $flag;
+
+ die;
+} 
+ 
+
+ 
+ 
+ 

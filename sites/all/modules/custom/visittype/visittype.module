@@ -1,0 +1,350 @@
+<?php
+
+ /**
+ * Implements hook_permission().
+ */
+function visittype_permission() {
+  return array( 
+    'access_visittype' => array(
+      'title' => t('access visittype section'),
+    )
+  );
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+ function  visittype_init(){
+ global $user;
+  
+} 
+
+/**
+* Implements hook_form().
+*/
+ 
+function visittype_menu() {
+    global $user;
+    $items['assign_visittype'] = array(
+    	//'title' => t('Adjudication Queue'), 
+    	'title' => 'Assign visit Type',
+      'description' => 'Patient visit type configuration',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('visittype_form'),
+    	'access arguments' => array('access content'),
+    );
+    $items['delete_visittype'] = array(
+      //'title' => t('Adjudication Queue'), 
+      'title' => 'Delete visit Type',
+      'description' => 'Delete patient visit type',
+      'page callback' => 'delete_visit_type',
+      'page arguments' => array(1),
+      'access arguments' => array('access content'),
+    );
+    $items['create_appointment'] = array(
+      'title' => 'Create Appointment',
+      'description' => 'Create Appointment Form',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('create_appt'),
+      'access arguments' => array('access content'),
+    );
+    return $items;
+}
+
+function create_appt() {
+  return drupal_get_form("create_appointment_form");
+}
+
+function create_appointment_form($form, &$form_state) {
+  if(!empty($_POST['ChiefComplaint'])){
+    $_SESSION['ChiefComplaint'] = $_POST['ChiefComplaint'];
+  }
+  if(!empty($_POST['Comments'])) {
+    $_SESSION['Comments'] = $_POST['Comments'];
+  }
+
+  $form['ChiefComplaint'] = array(
+    '#type' => 'textfield',
+    '#size' => 25,
+    '#required' => TRUE,
+    '#attributes' => array(
+      'class' => array('form-control input-ctrl'),
+      'id' => array('reason'),
+      'placeholder' => array(' Enter Reason'),
+    ),
+    '#theme_wrappers' => array(),
+  );
+
+  $form['Comments'] = array(
+    '#type' => 'textarea',
+    '#size' => 25,
+    '#attributes' => array(
+      'class' => array('form-control input-ctrl'),
+      'id' => array('notes'),
+      'placeholder' => array('Enter Notes'),
+    ),
+    '#theme_wrappers' => array(),
+  );
+
+  $form['cancel'] = array(
+    '#type' => 'button',
+    '#value' => 'Cancel',
+    //'#href' => '#',
+    '#attributes' => array(
+      'class' => array('col-sm-4 btn btn-primary custom-btn cancel-btn'),
+    ),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Create Appointment',
+    '#attributes' => array(
+      'class' => array('col-sm-6 btn btn-primary custom-btn appointment-btn'),
+    ),
+  );
+
+  return $form;
+}
+
+function create_appointment_form_validate($form, &$form_state) {
+  // echo "<pre>"; print_r($form_state['input']); exit;
+}
+
+
+ function visittype_form($form, &$form_state){
+   // Visit type array
+   $visittypeArray = fetch_visit_type();
+   $visittypeDD = array();
+   foreach($visittypeArray['result'] as $value){
+        //$VisitTypeID[] = $value['VisitTypeID']." ------- ";
+        //$Name = $value['Name']." +++++++ ";
+        $visittypeDD[$value['Name']] = $value['Name'];
+        
+   }
+
+ // practice location dropdown
+
+     $practicelocationArray = fetch_practice_location();
+     $practicelocationDD = array();
+     foreach($practicelocationArray['result'] as $value){
+        //$VisitTypeID[] = $value['VisitTypeID']." ------- ";
+        //$Name = $value['Name']." +++++++ ";
+        $practicelocationDD[$value['Name']] = $value['Name'];
+        
+   }
+
+ // Service location array
+   $vocabulary = taxonomy_vocabulary_machine_name_load('service_location');
+
+  $vocabulary_vid = $vocabulary->vid;
+  $terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+
+foreach($terms as $key=>$val){
+ 
+    //$facility_types[$val->name] = $val->tid;
+ 
+        $key = $val->tid;
+        $value = $val->name;
+        $service_locationDD[$value] = $value; 
+
+    }
+ 
+
+  // facility DD
+
+     $vocabulary = taxonomy_vocabulary_machine_name_load('facility');
+     $vocabulary_vid = $vocabulary->vid;
+     $terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+
+    foreach($terms as $key=>$val){
+ 
+        //$facility_types[$val->name] = $val->tid;
+     
+            $key = $val->tid;
+            $value = $val->name;
+            $facilityDDArray[$value] = $value; 
+
+    }
+
+
+
+  
+    $form['facility_list'] = array(
+    '#title' => 'Facility List',
+    '#type' => 'select',
+     //'#value' => '',
+      //'#required' => TRUE,
+      '#theme_wrappers' => array(),
+      '#options' =>  $facilityDDArray,
+    );
+    
+   $form['visit_type'] = array(
+    '#title' => 'Visit Type',
+    '#type' => 'select',
+    //'#value' => '',
+      //'#required' => TRUE,
+    '#theme_wrappers' => array(),
+    '#options' =>  $visittypeDD,
+    );
+  $form['practice_location'] = array(
+    '#title' => 'Practice Location',
+    '#type' => 'select',
+    //'#value' => '',
+      //'#required' => TRUE,
+    '#theme_wrappers' => array(),
+    '#options' =>  $practicelocationDD,
+    );
+
+   $form['service_location'] = array(
+    '#title' => 'Visit Type',
+    '#type' => 'select',
+    //'#value' => '',
+      //'#required' => TRUE,
+    '#theme_wrappers' => array(),
+    '#options' =>  $service_locationDD,
+    );
+
+ 
+   $form['submit'] = array(
+        '#title' => 'submit',
+        '#type' => 'submit',
+        '#attributes'=>array('class'=> array('btn btn-primary custom-btn search-btn')),
+        '#value'=> t("Save"),
+      );
+ 
+   return $form;
+ }
+ function visittype_form_submit($form, &$form_state){
+  global $user;
+  
+
+// Check visit type exists or not 
+
+/*$visit_type_query = new EntityFieldQuery(); 
+$visit_type_query->entityCondition('entity_type', 'node')  
+
+->entityCondition('bundle', 'location_configuration') 
+
+->fieldCondition('field_physical_location', 'value', $form_state['values']['facility_list'], '=');  
+
+$visit_type_result = $visit_type_query->execute();
+ 
+
+if (isset($visit_type_result['node'])) {
+
+  $visit_type_result_key = array_keys($visit_type_result['node']);   
+
+  $visit_type_resultsRows = entity_load('node', $visit_type_result_key); 
+
+  //echo "<pre>";
+
+  foreach($visit_type_resultsRows as $visit_type_rows){  
+
+    node_delete($visit_type_rows->nid);
+    
+  } 
+}*/
+
+// Node save by location 
+
+$node = new stdClass();
+$node->uid = $user->uid;     
+$node->type = 'location_configuration';     
+node_object_prepare($node);     
+$node->title = $form_state['values']['facility_list'];     
+$node->status   = 1;     
+$node->promote  = 0;     
+$node->sticky   = 0;     
+$node->language = 'en'; 
+$node->field_physical_location['und'][0]['value']= $form_state['values']['facility_list'];   
+$node->field_visit_type['und'][0]['value']= $form_state['values']['visit_type'];
+$node->field_practice_location['und'][0]['value']= $form_state['values']['practice_location'];
+$node->field_service_location['und'][0]['value']=  $form_state['values']['service_location'];
+
+node_save($node);
+drupal_set_message( "Visit type saved successfully.");
+   $form_state['redirect']  = 'assign_visittype';
+ 
+ } 
+
+ function fetch_visit_type(){
+
+   $serviceUrl = variable_get('visittype','');
+   $data = array();
+   $data_string = json_encode($data);
+   $data_result = request_type($serviceUrl,$data_string);
+   return $data_result;
+}
+
+function fetch_practice_location(){
+   $serviceUrl = variable_get('practice_location','');
+   $data = array();
+   $data_string = json_encode($data);
+   $data_result = request_type($serviceUrl,$data_string);
+   return $data_result;
+
+}
+
+ 
+function request_type($url) 
+{
+
+    $ch = curl_init();  
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch,CURLOPT_URL,$url);
+    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/json'));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(variable_get('authentication_key_api','')));
+    $output=curl_exec($ch); 
+    curl_close($ch);
+   // Debug output of the response
+
+   $result = json_decode($output, TRUE);
+   return $result;
+}
+
+function visittype_theme($existing, $type, $theme, $path) {
+    // Ex 1: the "story" node edit form.
+    $items['visittype_form'] = array(
+        'render element' => 'form',
+        'template' => 'visittype_configuration',
+        'path' => drupal_get_path('module', 'visittype'),
+    );
+    $items['create_appointment_form'] = array(
+        'render element' => 'form',
+        'template' => 'create_appointment',
+        'path' => drupal_get_path('module', 'visittype'),
+    );
+    return $items;
+}
+function delete_visit_type($reqparm){
+ 
+    if(!empty($reqparm)){
+     node_delete($reqparm);
+     drupal_set_message("Record deleted successfully");
+     drupal_goto('assign_visittype');
+    }
+ 
+
+
+
+}
+
+function visittype_form_alter(&$form, &$form_state, $form_id){
+ 
+   global $user;
+ 
+    if($form_id == "taxonomy_form_term"){  
+    // check role
+     if(!(in_array('administrator',$user->roles))){
+ 
+       unset($form['relations']);
+
+     }
+
+   } 
+ 
+
+  }

@@ -1,0 +1,4 @@
+name = Adjudication
+description =  This module is used to manage adjudication functionality 
+package = Wiphy Custom
+core = 7.x

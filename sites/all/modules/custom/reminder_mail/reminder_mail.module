@@ -1,0 +1,255 @@
+<?php 
+
+function reminder_mail_menu() {
+	 
+	$items['reminder'] = array(
+		'title' => 'Reminder', 
+		'description' => 'Reminder of Expity.',
+		'page callback' => 'reminder_expire',
+		'access callback' => TRUE,
+	    'access arguments' => array('access content'),
+	);
+	return $items;
+}
+
+function reminder_mail_cron(){
+
+	watchdog("cron for expiry",true);
+
+	/*
+	Checking expiry date for reminder when an account is going to expire. 30 days prior, 10 days prior and 3 days, 1 day prior and when an account has expired
+	*/
+	
+	$query = new EntityFieldQuery();
+	$entities = $query->entityCondition('entity_type', 'node')
+		->entityCondition('bundle', 'telos_appid')
+		->execute();
+	
+	if (!empty($entities['node'])) {
+		$nodes = entity_load('node', array_keys($entities['node']));
+		
+		foreach($nodes as $key => $result){ 
+			
+			if (!empty($result->field_expiry_date)) {
+				//$date=date_create($result->field_expiry_date['und'][0]['value']);
+				$user_status=$result->field_user_status['und'][0]['value'];
+				$expiry_date = $result->field_expiry_date['und'][0]['value'];
+				$expired_date = date('m/d/Y',strtotime($expiry_date . "+1 days"));
+				if($expiry_date == date("m/d/Y")){
+					
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Expiring Today";
+							$body = $message = "Your account is expiring today.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expired',
+										'message'=>$message,
+									);
+					
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				}
+				if($expired_date == date("m/d/Y")){
+				
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Account Expired";
+							$body = $message = "Your account is expired.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expired',
+										'message'=>$message,
+									);
+					
+							
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				} 
+				if(date('m/d/Y',strtotime($expiry_date . "-30 days")) == date("m/d/Y")){
+					
+					$result->field_going_to_expire['und'][0]['value'] = 1;
+					node_save($result);
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Account will be Expired in 30 days";
+							$body = $message = "Your account will be Expired in 30 days.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expire',
+										'message'=>$message,
+									);
+					
+							
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				}
+				 if(date('m/d/Y',strtotime($expiry_date . "-10 days")) == date("m/d/Y")){
+					
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Account will be Expired in 10 days";
+							$body = $message = "Your account will be Expired in 10 days.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expire',
+										'message'=>$message,
+									);
+					
+						
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				}
+				if(date('m/d/Y',strtotime($expiry_date . "-3 days")) == date("m/d/Y")){
+					
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Account will be Expired in 3 days";
+							$body = $message = "Your account will be Expired in 3 days.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expire',
+										'message'=>$message,
+									);
+					
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				}
+				if(date('m/d/Y',strtotime($expiry_date . "-1 days")) == date("m/d/Y")){
+					
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;
+							$subject = $header = "Account will be Expired in 1 day";
+							$body = $message = "Your account will be Expired in 1 day.";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Expire',
+										'message'=>$message,
+									);
+					
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				} 
+			}
+			if (!empty($result->field_user_status)) {
+				watchdog('cron_result', '<pre>' . print_r( $result, true) . '</pre>');
+				$user_appid = $result->field_app_id['und'][0]['value'];
+				$application_data = fetch_lambda_data($user_appid);
+				if(!empty($application_data['applicationStatus'])){
+					$app_Status = fnDecrypt($application_data['applicationStatus']);
+				}
+				$result->field_user_status['und'][0]['value'];
+				if((!empty($app_Status)) && ($app_Status == "started") && ($result->field_user_status['und'][0]['value'] == "inactive")){
+					
+					$user_details = user_load($result->uid);
+					if(!empty($user_details->field_notification)){
+						if($user_details->field_notification['und'][0]['value']=="ON"){
+							$emailId = $user_details->mail;							
+							$subject = $header = "Complete your enrollment";
+							$body = $message = "Please complete your enrollment";
+							$data = array(
+										'userId'=>fnEncrypt($result->uid),
+										'type'=>'Complete',
+										'message'=>$message,
+									);
+					
+							send_email_notification($emailId, $subject, $body);
+							if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+								$platform = $user_details->field_platform['und'][0]['value'];
+								$token = $user_details->field_device_token['und'][0]['value'];
+								send_push_notification($platform, $token, $header, $data);
+							}
+						}
+					}
+				}
+			} 
+		}
+	} 
+	
+	 
+	/* 
+	Checking the user status and application status for reminder to complete enrollment if a person has created an account but not started or completed enrollment
+	*/
+	
+	$user_results = db_query('SELECT u.name as name, u.uid as uid,u.mail as mail FROM {users} As u 
+	LEFT Join {node} As n ON n.uid = u.uid 
+	WHERE (n.uid is NULL)')->fetchAll();
+	
+	
+	/// reminder if a person has created an account but not started 
+	
+	foreach($user_results as $pending_users){
+		if(!empty($pending_users->uid)){
+			$user_details = user_load($pending_users->uid);
+			if(!empty($user_details->field_notification)){
+				if($user_details->field_notification['und'][0]['value']=="ON"){
+					$emailId = $user_details->mail;
+					
+					$subject = $header = "Enroll in Program";
+					$body = $message = "Please complete your enrollment";
+					$data = array(
+										'userId'=>fnEncrypt($pending_users->uid),
+										'type'=>'Enrollment',
+										'message'=>$message,
+									);
+					
+					send_email_notification($emailId, $subject, $body);
+					if((!empty($user_details->field_platform)) && (!empty($user_details->field_device_token))){
+						$platform = $user_details->field_platform['und'][0]['value'];
+						$token = $user_details->field_device_token['und'][0]['value'];
+						send_push_notification($platform, $token, $header, $data);
+					}
+				}
+			}
+		}
+	} 
+}
+

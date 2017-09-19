@@ -1,0 +1,4 @@
+name = Adjudication
+description =  This module is used to manage adjudication functionality 
+package = Telos Rewards Custom
+core = 7.x

@@ -1,0 +1,86 @@
+<?php 
+/* hook_help
+*/
+function wiphy_services_api_help($path, $arg) {
+  if ($path == 'admin/help#wiphy_services_api_api') {
+    return check_markup(file_get_contents( dirname(__FILE__) . "/README.txt") );
+  }
+}
+
+
+ 
+
+
+/**
+ * Implements of hook_services_resources().
+ */
+function wiphy_services_api_services_resources() {
+  $api = array(
+	'update_iosapp' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'Update IOS App API',
+		   'callback' => '_update_iosapp',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),
+);
+
+  return $api;
+}
+
+function _update_iosapp($data){
+    $url = $data['url'];
+    $version = $data['version'];
+    $environment = $data['environment'];
+  	 
+	try {	
+
+		if($environment){
+          
+         $vocab = taxonomy_vocabulary_machine_name_load('ios_app_version');
+         $tree = taxonomy_get_tree($vocab->vid);
+         foreach ($tree as $key => $value) {
+         	 if($value->name == $environment){
+         	 	//print '-------'.$value->tid;
+                $term = new stdClass();
+        		$term->vid = $vocab->vid;
+         		$term->tid = $value->tid;
+         		$term->name = $environment;
+         		$term->field_appurl[LANGUAGE_NONE][0]['value'] = $url;
+         		$term->field_appversion[LANGUAGE_NONE][0]['value'] = $version;
+         		$term->description = '';
+         		taxonomy_term_save($term);
+         	 }
+         	
+         }
+
+
+         
+
+        // taxonomy_term_save($term);
+   			 
+			return array("status"=>'0001', "message" => "Success.");	
+		} 
+		else {
+			
+			return array("status"=>'0002', "message" => "No Data Found.");
+		} 
+	}
+	catch (Exception $e) {
+		return array("status"=>false,"message"=> "Error saving ios data.");
+	}
+}
+

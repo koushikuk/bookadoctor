@@ -1,0 +1,14 @@
+1. Create content type with name visit_type_map
+  fields : 
+   a) visit_type
+   b) 
+  
+
+
+ 2. Create taxonomy for service location:
+   name : service_location
+    put some sample terms
+
+
+
+https://wiphy-api.inadev.net/emrservices-dev/consultation/location?emr_id=1

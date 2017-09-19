@@ -1,0 +1,4 @@
+name = TELOS API
+description = "TELOS LAMBDA API INTEGRATION"
+package = Telos custom
+core = "7.x" 

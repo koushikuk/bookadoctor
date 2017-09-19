@@ -1,0 +1,5 @@
+name = appointment
+description =  This module is used to manage appointment  
+package = Axelia Custom
+core = 7.x
+scripts[] = js/appointmentjs.js

@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		
+		<title>Axelia|Adjudication Queue</title>
+		
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="../css/style.css">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
+			
+		<script src="../js/jquery.min.js"></script>	
+		<script src="../js/bootstrap.min.js"></script>
+			
+	</head>
+	
+	<body>
+		<div class="background-inner"></div>
+		<div class="col-xs-12 no-left-padding no-right-padding">
+			<!-- header part-->
+			<div class="header col-xs-12 no-left-padding no-right-padding">
+				<div class="container">
+					<div class="col-xs-4 logo-div">
+						<img src="../img/logo_wiphy.png" class="img-responsive">
+					</div>
+					<ul class="col-xs-7 col-md-3 header-right-links pull-right">
+						<li><a href="#"><i class="fa fa-user" aria-hidden="true"></i>My Account</a></li>
+						<li><a href="#"><i class="fa fa-sign-out" aria-hidden="true"></i>Logout</a></li>
+					</ul>
+		
+				</div>
+			</div>
+			<!-- End Of Header -->
+			
+			<!-- content part-->
+			<div class="main-content col-xs-12 no-left-padding no-right-padding">
+				<div class="col-md-12 no-left-padding no-right-padding">
+					<nav class="navbar navbar-default navigate">
+						<div class="container">
+							<div class="navbar-header">
+								<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#main-menu" aria-expanded="false">
+									<span class="sr-only">Toggle navigation</span>
+									<span class="icon-bar"></span>
+									<span class="icon-bar"></span>
+									<span class="icon-bar"></span>
+								</button>
+							</div>
+							<div class="collapse navbar-collapse" id="main-menu">
+								<ul class="nav navbar-nav navigation-list no-left-padding">
+									<li><a href="#">Home</a></li>
+									<li><a href="#">Adjucation Queue</a> </li>
+									<li><a href="#">Adjudicators</a></li>
+									<li><a href="#">Facilities</a></li>
+									<li><a href="#">Wiphy Dashboard</a></li>
+								</ul>
+							</div>
+						</div>
+					</nav>
+				</div>
+					
+				<div class="container">
+					<div class="details-div col-md-12 no-left-padding no-right-padding ">
+						<div class="col-xs-12 no-left-padding no-right-padding">	
+							<div class="body-heading ">
+								<p>Adjudication Queue</p>
+							</div>
+						</div>
+						
+						<div class="adjudicationQueue">
+							<div class="col-xs-12 no-left-padding no-right-padding selection-panel">
+									
+								<div class="col-sm-4 no-right-padding">
+									<label for="all"></label>
+									<select id="allAdjudicationQueue" name="all" class="listChoice">
+										<option value="all">All</option>
+										<option value="Second Choice">Second Choice</option>
+										<option value="Third Choice">Third Choice</option>
+										<option value="Fourth Choice">Fourth Choice</option>
+									</select>
+									
+								</div>
+								<div class="col-sm-6 no-right-padding">
+									<div class="col-xs-10 col-sm-5 no-left-padding no-right-padding">
+										<button class="btn btn-primary custom-btn search-btn">Today</button>
+									</div>
+									<div class="col-xs-10 col-sm-4 no-left-padding no-right-padding">
+										<button class="btn btn-primary custom-btn search-btn">Last Week</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Details Table  -->	
+						<div class="col-xs-12 no-left-padding no-right-padding adjudicationQueueDetails">
+							<div class="col-sm-4 no-right-padding show-details">
+								<span class="textShow">Show</span>
+								<span><select id="" name="" class="listChoice">
+									<option value="all">05</option>
+									<option value="Second Choice">05</option>
+									<option value="Third Choice">05</option>
+									<option value="Fourth Choice">05</option>
+								</select></span>
+								<span class="textShow">Options</span>
+							</div>
+							<table class="table adjudicationQueueTable">
+								<thead>
+									<tr>
+										<th>Facility Name</th>
+										<th>First Name</th>
+										<th>Last Name</th>
+										<th>Created Date</th>
+										<th>Start Time</th>
+										<th>Finish Time</th>
+										<th>Checkin Time</th>
+										<th>Checkout Time</th>
+										<th>Waiting Time</th>
+										<th>Facial ID Status</th>
+										<th>Insurance Card</th>
+										<th>Checkin/<br>Checkout</th>
+										
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Test Facility</td>
+										<td>Adney</td>
+										<td>J</td>
+										<td>07-31-2017</td>
+										<td>16:25:18</td>
+										<td>16:48:10</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td><button class="btn btn-primary custom-btn search-btn">Verify ID</button></td>
+										<td>&nbsp;</td>
+										<td><button class="btn btn-primary custom-btn checkIn-btn">Check In</button></td>
+									</tr>
+											
+									<tr>
+										<td>Test Facility</td>
+										<td>Adney</td>
+										<td>J</td>
+										<td>07-31-2017</td>
+										<td>16:25:18</td>
+										<td>16:48:10</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td><button class="btn btn-primary custom-btn search-btn">Verify ID</button></td>
+										<td>&nbsp;</td>
+										<td><button class="btn btn-primary custom-btn checkIn-btn">Check In</button></td>
+									</tr>
+									
+									<tr>
+										<td>Test Facility</td>
+										<td>Adney</td>
+										<td>J</td>
+										<td>07-31-2017</td>
+										<td>16:20:18</td>
+										<td>16:48:10</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td><button class="btn btn-primary custom-btn search-btn">Verify ID</button></td>
+										<td>&nbsp;</td>
+										<td><button class="btn btn-primary custom-btn checkIn-btn">Check In</button></td>
+									</tr>
+									
+									<tr>
+										<td>Test Facility</td>
+										<td>Adney</td>
+										<td>J</td>
+										<td>07-31-2017</td>
+										<td>16:20:18</td>
+										<td>16:48:10</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td><button class="btn btn-primary custom-btn search-btn">Verify ID</button></td>
+										<td>&nbsp;</td>
+										<td><button class="btn btn-primary custom-btn checkIn-btn">Check In</button></td>
+									</tr>
+									
+									<tr>
+										<td>Test Facility</td>
+										<td>Adney</td>
+										<td>J</td>
+										<td>07-31-2017</td>
+										<td>16:20:18</td>
+										<td>16:48:10</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td>00:00:00</td>
+										<td><button class="btn btn-primary custom-btn search-btn">Verify ID</button></td>
+										<td>&nbsp;</td>
+										<td><button class="btn btn-primary custom-btn checkIn-btn">Check In</button></td>
+									</tr>
+								</tbody>
+							</table>
+							
+							<!-- Pagination -->
+							<!-- <div class="adjudicationQueueTable-pagination">
+								First
+								Previous
+								<ul>
+									<li>
+										<div><a><span>1</span></a></div>
+									</li>
+									<li>
+										<div><a><span>2</span></a></div>
+									</li>
+									<li>
+										<div><a><span>3</span></a></div>
+									</li>
+									<li>
+										<div><a><span>4</span></a></div>
+									</li>
+								</ul>
+								Next
+								Last
+							</div> -->
+						</div>
+						<!-- End Of Details Table  -->
+							
+					</div>
+				</div>
+			</div>
+			<!-- End Of Main Content -->
+			
+			<!-- Footer part  -->
+			<div class="footer loginFooter col-xs-12">
+				<div class="footer-details">
+					<p>
+						Powered by INADEV
+					</p>
+				</div>
+			</div>
+			<!-- End Of Footer -->
+			
+		</div>
+	</body>
+</html>

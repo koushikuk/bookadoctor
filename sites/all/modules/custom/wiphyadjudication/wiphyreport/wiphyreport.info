@@ -1,0 +1,5 @@
+name = Wiphy Reports
+description =  This module is used to reports of enrolled users data
+package = Wiphy Report
+core = 7.x
+dependencies[] = wiphyadjudication

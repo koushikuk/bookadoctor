@@ -1,0 +1,39 @@
+.globalentry {
+    margin-left:400px;
+}
+.margin_info{
+	margin-left:300px;
+}
+.div1{
+	width:50%;
+	float:left;
+}
+.img_front,.selfi_img{
+	display:inline-block;
+	width:200px;
+	vertical-align: top;
+	height: 140px;
+	border: 2px solid;
+}
+.checkbox_div{
+	list-style-type: none !important;
+	display:inline-block;
+}
+.checkbox_div>li>input{
+	display:inline-block;
+}
+.div2{
+	float:right;
+	width:50%;
+}
+.cont{
+	margin-top:20px;
+}
+.checkbox_div1{
+	list-style-type: none !important;
+	display:inline-block;
+	margin-top:10px !important;
+}
+.checkbox_div1>li{
+	display:inline-block;
+}

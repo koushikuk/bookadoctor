@@ -1,0 +1,218 @@
+<?php
+/**
+ * Implements of hook_services_resources().
+ */
+ 
+function application_config_services_resources() {
+  $api = array(
+	
+	'configure_module' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'Configure Module API',
+		   'callback' => '_configure_module',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),	
+		
+ 
+);
+
+  return $api;
+}
+
+///////////////////////////Key Encrypt Function//////////////////////
+
+function fnKeyEncrypt($sValue, $sSecretKey = null, $blockSize = null) {
+	$blockSize = 128;
+	$rawkey = "79EB4E69B9966171D86885C978756698";
+	$sSecretKey = hash("SHA256", $rawkey, true); //we want a 32 byte binary blob 
+	$aes = new AES($sValue, $sSecretKey, $blockSize);
+
+	$enc = $aes->encrypt();
+	return $enc;
+}
+
+///////////////////////////Key Decrypt Function//////////////////////
+
+function fnKeyDecrypt($sValue, $sSecretKey = null, $blockSize = null) { echo "jkjk".$sValue;
+	$blockSize = 128;
+	$rawkey = "79EB4E69B9966171D86885C978756698";
+	$sSecretKey = hash("SHA256", $rawkey, true); //we want a 32 byte binary blob 
+	$aes = new AES($sValue, $sSecretKey,$blockSize);
+    $aes->setData($sValue);
+	$dec=$aes->decrypt();
+    return $dec;
+}
+/* 
+
+Function to get Configuration Parameters for Dynamic Screen Generation
+
+ */
+
+function _configure_module($data){
+	global $user;
+	
+	// Check if platformtype has been provided
+	
+	if(empty($data)) {
+		return array("status"=>false,"message"=> "Platform Type is missing.");
+	}	
+	
+	try { 
+	
+		
+		/// Get the Encryption Key		
+		$encryption_key = variable_get('encryption_key');
+		
+		/// Get the Face recognition Percentage
+		$face_recognition_value = variable_get('face_recognition');
+		
+		/// Get the Auto Logout time
+		$auto_logout_time = variable_get('auto_logout_time');
+		
+		/// Get the number of modules
+		$module_number = variable_get('module_number');
+		
+		/// Configuration of different programs
+		
+		$query_program_config = new EntityFieldQuery();
+		$result_program_config = $query_program_config->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'program_type')
+			->execute();
+		$programs = node_load_multiple(array_keys($result_program_config['node']));
+		 
+
+		if($programs){
+			foreach($programs as $key=>$val){
+				$menuimage_path = (!empty($val->field_program_image['und'][0]['uri'])) ? file_create_url($val->field_program_image['und'][0]['uri']) : "";
+				$program_Data[] = array(
+						// get image url
+ 
+						'program_name'=>$val->field_program_name['und'][0]['value'],
+						'program_image'=>$menuimage_path,
+						'program_price' => $val->field_program_price['und'][0]['value'],
+						'program_enable' => $val->field_program_enable['und'][0]['value'],
+					);
+
+			}
+			 
+		}
+				
+		/// Proceed if all the configuration data has been provided
+		
+		if(!empty($program_Data)){
+			
+								
+			//// Complete array containing all the data for configuration message, application steps, and field level configuration
+			
+			$configurable_items['program_config'] = $program_Data;
+			
+			/// Check if Encryption Key has been provided
+			
+			if($encryption_key){
+				$configurable_items['encryption_key'] = fnKeyEncrypt($encryption_key);
+			}
+			
+			
+			/// Check if face recognition percentage has been provided
+			
+			if($face_recognition_value){
+				$configurable_items['face_recognition_min_percent_to_match'] = $face_recognition_value;
+			}
+			
+			/// Check if server URL has been provided
+			
+			if($auto_logout_time){
+				$configurable_items['auto_logout_waiting_time_in_sec'] = $auto_logout_time;
+			}
+			
+			/// Check if number of modules to complete has been provided
+			
+			if($module_number){
+				$configurable_items['number_of_module_to_check_completion_percentage'] = $module_number;
+			}
+			
+			return array("status"=>true, "application_specific_configuration"=>$configurable_items);	/// Success message
+		}
+		
+		else {
+			return array("status"=>false, "message" => "Invalid data. Please provide valid data."); /// Failure message if field configuration not provided
+		} 
+	}
+	catch (Exception $e) {
+		return array("status"=>false,"message"=> "No data found. Please try again later.");
+	}	
+}
+
+///////////////// Configurable Apllication settings for admin ////////////////////////
+
+function config_setings_form($form, &$form_state){
+	$form=array();
+	$form['encryption_key']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Encryption Key',
+		'#default_value' => variable_get('encryption_key'),
+	);
+	$form['face_recognition']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Face recognition Percentage to match',
+		'#default_value' => variable_get('face_recognition'),
+	);
+	$form['screen_waiting_time']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Splash Screen waiting time(In seconds)',
+		'#default_value' => variable_get('screen_waiting_time'),
+	);
+	$form['auto_logout_time']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Auto Logout waiting time(In seconds)',
+		'#default_value' => variable_get('auto_logout_time'),
+	);
+	$form['module_number']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Number of modules to check completion percentage',
+		'#default_value' => variable_get('module_number'),
+	);
+	$form['submit']=array(
+		'#type'=>'submit',
+		'#value'=>'Submit'
+	);
+	$form['#submit'][]='config_setings_form_submit';
+	return $form;
+}
+
+function config_setings_form_validate($form,&$form_state) {
+	if(preg_match('/[^0-9.]/', $form_state['values']['face_recognition'])) {
+		form_set_error('investment_fee_percentage', 'Face recognition value contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['screen_waiting_time'])) {
+		form_set_error('investment_fee_percentage', 'Screen waiting time contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['auto_logout_time'])) {
+		form_set_error('investment_fee_percentage', 'Auto logout time contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['module_number'])) {
+		form_set_error('investment_fee_percentage', 'Module number contains non numeric characters');
+	}
+}
+function config_setings_form_submit($form,&$form_state) {
+	variable_set('encryption_key', $form_state['values']['encryption_key']);
+	variable_set('face_recognition', $form_state['values']['face_recognition']);
+	variable_set('screen_waiting_time', $form_state['values']['screen_waiting_time']);
+	variable_set('auto_logout_time', $form_state['values']['auto_logout_time']);
+	variable_set('module_number', $form_state['values']['module_number']);
+    drupal_set_message(t('Successfully Saved.'));
+}

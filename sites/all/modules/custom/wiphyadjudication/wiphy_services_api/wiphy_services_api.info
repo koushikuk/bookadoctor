@@ -1,0 +1,4 @@
+name = Wiphy Services API
+description = "wiphy REST Client Services API code"
+package = Wiphy Custom
+core = "7.x" 

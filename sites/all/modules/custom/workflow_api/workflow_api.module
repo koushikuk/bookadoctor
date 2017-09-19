@@ -1,0 +1,915 @@
+<?php 
+/* 
+print_r function for PHP 
+
+*/
+function p($val, $exit = TRUE)
+{
+    echo "<pre>";
+    print_r($val);
+    echo "</pre>";
+    if ($exit) {
+        exit();
+    }
+} 
+
+/* 
+hook_help
+*/
+function workflow_api_help($path, $arg) {
+  if ($path == 'admin/help#workflow_api') {
+    return check_markup(file_get_contents( dirname(__FILE__) . "/README.txt") );
+  }
+}
+ /**
+ * Implements hook_permission().
+ */
+function workflow_api_permission() {
+  return array(
+    'application_config' => array(
+      'title' => t('Application Configuration Permission'),
+    )
+  );
+} 
+
+/**
+ * Implementation of hook_menu().
+ */
+function workflow_api_menu(){
+
+	$items['telos_url'] = array(
+		'title' => 'Base URL',
+		'description' => '',
+		'weight' => 100,
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('url_setings_form'),
+		'access arguments' => array('application_config'),
+	);
+	$items['telos_config'] = array(
+		'title' => 'Configuration Settings',
+		'description' => '',
+		'weight' => 100,
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('config_setings_form'),
+		'access arguments' => array('application_config'),
+	);
+	
+    return $items;
+ }
+ 
+/**
+ * Implementation of hook_init().
+ */
+ 
+function workflow_api_init() { 
+	drupal_add_js('jQuery(document).ready(function () {  
+		jQuery(".views-row-edit-static").hide(); 
+		jQuery(".field-collection-view-links").hide(); 
+		jQuery(".action-links-field-collection-add").hide(); 
+	
+	});',array('type' => 'inline', 'scope' => 'footer', 'weight' => 5)
+	);
+}
+/**
+ * Implements hook_form_alter().
+ */
+function workflow_api_form_alter(&$form, &$form_state, $form_id)
+{ 
+	global $user;
+	
+	switch($form_id){
+		case 'platform_step_node_form':
+			$form['#submit'][] = 'platform_step_submit';
+		break;
+		case 'taxonomy_overview_terms':
+			$form['actions']['back']['#type'] = 'submit';
+			$form['actions']['back']['#value'] = 'Back';
+			$form['#submit'][] = 'taxonomy_overview_form_submit';		
+		break;
+		case 'taxonomy_overview_vocabularies':
+			$form['actions']['back']['#type'] = 'submit';
+			$form['actions']['back']['#value'] = 'Back';
+			$form['#submit'][] = 'taxonomy_overview_vocabularies_form_submit';		
+		break;
+		case 'taxonomy_form_term':
+			
+			if($form['#vocabulary']->machine_name == 'api_keys')
+			{
+				$form['#submit'][] = 'api_keys_add_form_submit';
+			}
+			if($form['#vocabulary']->machine_name == 'application_page')
+			{	
+				$fields['select'] = "Select";
+				$field_values['select'] = "Select";
+				
+				// For Default Display of submitted values
+				
+				$step_id = $form['#entity']->field_dependent_step['und'][0]['tid']; 
+				$field_id = $form['#entity']->field_dependent_field['und'][0]['value']; 
+				
+				foreach($form['#entity']->field_dependent_field_value['und'] as $dependentValue) { //p($dependentValue);
+					$field_value[] = $dependentValue['value']; 
+				}
+				
+				$options_first = $form['field_dependent_step']['und']['#options'];
+			
+				$selected = isset($form_state['values']['field_dependent_step']) ?  $form_state['values']['field_dependent_step'] : $step_id;
+				$selected_val = isset($form_state['values']['dependent_field']) ?  $form_state['values']['dependent_field'] : $field_id;
+			
+				//Load application pages field values
+				
+				$form['field_dependent_step']['und']['#ajax'] = array(
+					//'event' => 'change',
+					'wrapper' => 'dropdown-second-replace',
+					'callback' => 'dependent_field_callback'
+				);
+				
+				$form['dependent_field'] = array(
+					'#type' => 'select',
+					'#title' => 'Dependent Field',
+					'#options' => $fields,
+					'#default_value' => !empty($field_id) ? $field_id : '',
+					'#weight' => 4,
+					'#prefix' => '<div id="dropdown-second-replace">',
+					'#suffix' => '</div>',
+					'#options' =>  get_fields($selected),
+					'#ajax' => array(
+						//'event' => 'change',
+						'wrapper' => 'dropdown-third-replace',
+						'callback' => 'dependent_field_value_callback'
+					)
+				);
+				
+				$form['dependent_field_value'] = array(
+					'#type' => 'select',
+					'#multiple' => TRUE,
+					'#title' => 'Dependent Field Value',
+					'#prefix' => '<div id="dropdown-third-replace">',
+					'#suffix' => '</div>',
+					'#options' => get_field_values($selected_val),
+					'#default_value' => !empty($field_value) ? $field_value : '',
+					'#weight' => 5,
+				);
+				
+			}
+		break;
+		case 'application_step_field_config_node_form':
+			$delta = 0;
+			$max_delta = $form['field_form_fields'][LANGUAGE_NONE]['#max_delta'];
+			$value_terms['0'] = "Select";
+			$voc_names = taxonomy_vocabulary_get_names();
+			foreach($voc_names as $key=>$val){
+				$value_terms[$val->vid] = $val->name;
+			}
+			while ($delta <= $max_delta) {
+				$values['0'] = "Select";
+				$term = $form['field_form_fields']['und'][$delta]['#entity']->field_value_term['und'][0]['value']; 
+				$terms = taxonomy_get_tree($term,0,NULL,TRUE);
+				foreach($terms as $val){
+					$values[]=$val->name;
+				}
+				$form['field_form_fields']['und'][$delta]['value_terms'] = array(
+					'#type' => 'select',
+					'#title' => 'Value Terms',
+					'#options' => $value_terms,
+					'#default_value' => !empty($term) ? $term : '',
+					'#weight' => 100,
+				);
+				$fields_delta = 0;
+				$max_fields_delta = $form['field_form_fields']['und'][$delta]['field_result_condition'][LANGUAGE_NONE]['#max_delta'];
+				while ($fields_delta <= $max_fields_delta) {
+					$value_ids = $form['field_form_fields']['und'][$delta]['field_result_condition']['und'][$fields_delta]['#entity']->field_display_value['und'][0]['value']; 
+					$form['field_form_fields']['und'][$delta]['field_result_condition']['und'][$fields_delta]['display_value'] = array(
+						'#type' => 'select',
+						'#title' => 'Values',
+						'#options' => $values,
+						'#default_value' => !empty($value_ids) ? $value_ids : '',
+						'#weight' => 100,
+					);
+					$fields_delta++;
+				} 
+				$delta++;
+			}
+		break;
+		case 'telos_error_message_node_form':
+			if(!in_array('administrator',$user->roles)){	
+				$form['title'] = Array
+				(
+					'#type' => 'textfield',
+					'#title' => 'Message Code',
+					'#required' => 1,
+				    '#disabled'=>true,
+					'#default_value' => generate_message_code(),
+					'#maxlength' => 255,
+					'#weight' => -5,
+				);
+				
+			}
+		break;
+	}
+}
+
+function dependent_field_callback($form,$form_state){
+	return $form['dependent_field'];
+}
+
+
+//Load application pages fields
+			
+function get_fields($step){  
+	if((!empty($step))&& ($step!="_none")){ 
+		$application_tid = $step['und'][0]['tid'];
+		$application_term = taxonomy_term_load($application_tid);
+		$application_name = $application_term->name;
+		$query = new EntityFieldQuery();
+		$entities = $query->entityCondition('entity_type', 'node')
+			->propertyCondition('type', 'application_step_field_config')
+			->propertyCondition('status', 1)
+			->propertyCondition('title', $application_name,'=')
+			->execute();
+		
+		if (!empty($entities['node'])) {
+			$nodes = entity_load('node', array_keys($entities['node']));
+			foreach($nodes as $node){
+				foreach($node->field_form_fields['und'] as $val){
+					$item_array[] =  $val['value'];	
+				}						
+			}
+			
+			$form_fields = field_collection_item_load_multiple($item_array);
+			foreach($form_fields as $form_fields_config){
+				$fields[$form_fields_config->item_id] = $form_fields_config->field_field_label['und'][0]['value'];
+			}
+		} 
+		
+		//return new options
+		return $fields;
+	}else{
+		return array('- Select a field');
+	}
+}
+
+function dependent_field_value_callback($form,$form_state){
+	return $form['dependent_field_value'];
+}
+
+
+//Load application pages field values
+			
+function get_field_values($field){  
+	if((!empty($field))&& ($field!="_none")){ 
+		$item = field_collection_item_load($field);
+		$fieldValue_term = $item->field_value_term['und'][0]['value']; 
+		
+		$fieldValues = taxonomy_get_tree($fieldValue_term,0,NULL,TRUE);
+		foreach($fieldValues as $value){
+			$field_values[$value->name]=$value->name;
+		}
+		
+		return $field_values;
+	}else{
+		return array('- Select a value');
+	}
+}
+function generate_message_code(){
+	
+	$string = '1234567890';
+	$string_shuffled = str_shuffle( $string );
+	$message_random_number  = substr( $string_shuffled, 1, 4 );
+	$message_string   = urlencode( 'TEL-'.$message_random_number );
+	return $message_string;
+} 
+
+/// Save data of node from Custom Field to Drupal Database
+
+function workflow_api_node_presave($node){
+	if($node->type=="application_step_field_config"){
+
+		foreach($node->field_form_fields['und'] as $value){
+			if(!empty($value['entity']->field_value_term)){
+				$value['entity']->field_value_term['und'][0]['value'] = $value['value_terms'];
+			}
+			if(!empty($value['entity']->field_result_condition)){
+			
+				foreach($value['entity']->field_result_condition['und'] as $result_value){ 	
+				
+					$result_value['entity']->field_display_value['und'][0]['value'] = $result_value['display_value'];
+					
+				}
+			}
+			
+		} 
+		
+	}
+} 
+
+/// Save data of taxonomy term from Custom Field to Drupal Database
+
+function workflow_api_taxonomy_term_presave($term){
+	
+	if($term->vocabulary_machine_name=="application_page"){
+		if(!empty($term->dependent_field)){
+			$term->field_dependent_field['und'][0]['value'] = $term->dependent_field;
+		}
+		if(!empty($term->dependent_field_value)){
+			foreach($term->dependent_field_value as $dependent_field_value) { 
+				if(!empty($dependent_field_value)){
+					$term->field_dependent_field_value['und'][]['value'] = $dependent_field_value;
+				}
+			}
+		}
+		
+	} 
+} 
+
+function platform_step_submit($form, &$form_state){
+	
+	$platform_type = $form_state['values']['field_platform_type']['und'][0]['tid'];
+	$application = $form_state['values']['field_application']['und'][0]['target_id'];
+	$query = new EntityFieldQuery();
+
+	//Load previously entered Application Pages for a platform and delete if a new record for same platform has been generated
+	
+	$entities = $query->entityCondition('entity_type', 'node')
+		->propertyCondition('type', 'platform_step')
+		->propertyCondition('status', 1)
+		->fieldCondition('field_platform_type', 'tid',$platform_type, '=') 
+		->fieldCondition('field_application', 'target_id',$application, '=') 
+		->execute();
+
+	if (!empty($entities['node'])) {
+		$nodes = entity_load('node', array_keys($entities['node']));
+		foreach($nodes as $node){
+			node_delete($node->nid);
+		}
+	}
+	
+}
+
+// Implement Custom Back Button functioanality in Taxonomy forms
+
+function taxonomy_overview_form_submit($form, &$form_state){
+	
+	if($form_state['clicked_button']['#value'] == 'Back'){
+        drupal_goto('admin/structure/taxonomy');
+    }
+	
+}
+
+function taxonomy_overview_vocabularies_form_submit($form, &$form_state){
+	
+	if($form_state['clicked_button']['#value'] == 'Back'){
+        drupal_goto('configure-multistep-form');
+    }
+	
+}
+
+function application_page_overview_form_submit($form, &$form_state){
+	if($form_state['clicked_button']['#value'] == 'Back'){
+        drupal_goto('manage-steps');
+    }
+	
+}
+
+function api_keys_add_form_submit($form, &$form_state){
+	$form_state['redirect'] = 'admin/structure/taxonomy/api_keys';
+}
+
+/**
+ * Implements of hook_services_resources().
+ */
+ 
+function workflow_api_services_resources() {
+  $api = array(
+	
+	'application_platform' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'Application Platform API',
+		   'callback' => '_application_platform',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),	
+	
+	'configure_application' => array(
+	  'operations' => array(
+		'create' => array(
+		   'help' => 'Configure Application API',
+		   'callback' => '_configure_application',
+		   'access arguments' => array('access content'),
+		   'access arguments append' => FALSE,
+		   'args' => array(
+				array(
+				'name' => 'data',
+				'type' => 'varchar',
+				'description' => 'data',
+				'source' => 'data',
+				'optional' => FALSE,
+				),
+				
+		   ),
+		 ),
+	  ),
+	),	
+		
+ 
+);
+
+  return $api;
+}
+
+/* 
+
+API for Application Platform
+
+*/
+
+function _application_platform($data){
+	global $user;
+	$vocabulary = taxonomy_vocabulary_machine_name_load('platform_type');
+
+	$vocabulary_vid = $vocabulary->vid;
+	$terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+	
+	$platform_types = array();
+	
+	foreach($terms as $key=>$val){
+		
+		$platform_types[$val->name] = $val->tid;
+	}
+	try { 
+		return array("status"=>true, "data"=>$platform_types);	
+	}
+	catch (Exception $e) {
+		return array("status"=>false,"message"=> "No data found. Please try again later.");
+	}	
+}
+
+/* 
+
+Function to get Configuration Parameters for Dynamic Screen Generation
+
+ */
+
+function _configure_application($data){
+	global $user;
+	
+	// Check if platformtype has been provided
+	
+	if(empty($data)) {
+		return array("status"=>false,"message"=> "Platform Type is missing.");
+	}	
+	
+	try { 
+	
+		/// Get the Server URL		
+		$server_url = variable_get('api_url');
+		
+		/// Get the Encryption Key		
+		$encryption_key = variable_get('encryption_key');
+		
+		/// Get the Face recognition Percentage
+		$face_recognition_value = variable_get('face_recognition');
+		
+		/// Get the Screen waiting time
+		$screen_waiting_time = variable_get('screen_waiting_time');
+		
+		/// Get the Auto Logout time
+		$auto_logout_time = variable_get('auto_logout_time');
+		
+		/// Get the number of modules
+		$module_number = variable_get('module_number');
+		
+		///	Configuration for Workflow engine
+		
+		$query = new EntityFieldQuery();
+
+		$entities = $query->entityCondition('entity_type', 'node')
+			->propertyCondition('type', 'application')
+			->propertyCondition('title', $data['application'])
+			->propertyCondition('status', 1)
+			->range(0,1)
+			->execute();
+
+		if (!empty($entities['node'])) {
+			$node = node_load(array_shift(array_keys($entities['node'])));
+		}
+		
+		$view = views_get_view('applicaion_steps');
+		$view->set_display('page');
+		$args = array($node->nid, $data['PlatformType']);
+		$view->set_arguments($args);
+		$view->execute();
+		$view_result = $view->result;					
+		
+		/// Field level Configuration for dynamic screen generation
+		
+		$query_field_config = new EntityFieldQuery();
+		$query_field_config->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'application_step_field_config')
+			->propertyOrderBy('created', 'ASC');
+		$result_field_config = $query_field_config->execute();		// Application Steps field configuration array
+		
+		/// Configuration for Navigation Workflow
+		
+		$view_navigation='manage_forward_backword_arrow';
+		$display='page';
+		$navigation_pages_row = array();
+		$navigation_pages = array();
+		$view_navigation_result = views_get_view_result($view_navigation, $display);		//	 Navigation Workflow configuration array
+		
+		/// Configuration of Message API for sync every Platform 
+		
+		$query_msg_config = new EntityFieldQuery();
+		$result_msg_config = $query_msg_config->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'telos_error_message')
+			->execute();
+		$nodes = node_load_multiple(array_keys($result_msg_config['node']));
+		if($nodes){
+			foreach($nodes as $key=>$val){
+				
+				$message_Data[] = array(
+						'message_code'=>$val->title,
+						'message_text'=>$val->field_message_test['und'][0]['value'],
+						$val->title => $val->field_message_test['und'][0]['value'],
+					);
+				
+			}
+			$message_arr['error_message'] = $message_Data;	// Message array for every platform
+		}
+		
+		/// Configuration of different programs
+		
+		$query_program_config = new EntityFieldQuery();
+		$result_program_config = $query_msg_config->entityCondition('entity_type', 'node')
+			->entityCondition('bundle', 'program_type')
+			->execute();
+		$programs = node_load_multiple(array_keys($result_program_config['node']));
+		 
+     
+
+
+
+		if($programs){
+			foreach($programs as $key=>$val){
+				$menuimage_path = file_create_url($val->field_program_image['und'][0]['uri']);
+				$program_Data[] = array(
+						// get image url
+ 
+						'program_name'=>$val->field_program_name['und'][0]['value'],
+						'program_image'=>$menuimage_path,
+						'program_price' => $val->field_program_price['und'][0]['value'],
+						'program_enable' => $val->field_program_enable['und'][0]['value'],
+					);
+
+			}
+			 
+		}
+		
+		/// Proceed if all the configuration data has been provided
+		
+		if((!empty($result_field_config))&&(!empty($result_msg_config))&&(!empty($view_result))&&(!empty($view_navigation_result))){
+			
+			// Get rows of Application Steps field configuration array
+			
+			$step_result = array_keys($result_field_config['node']);
+			$stepRows = entity_load('node', $step_result);
+			
+			// Get rows of  Workflow engine configuration array
+			
+			$application_pages_row = $view_result[0]->_field_data['nid']['entity']->field_application_page['und'];
+			foreach($application_pages_row as $key => $page_name){
+				$application_term = taxonomy_term_load($page_name['tid']);
+				$application_name = $application_term->name;
+				$application_pages[$key] = $application_name;
+			}
+			
+			// Get rows of Navigation Workflow configuration array
+			
+			$backwordarrow_pages_row = $view_navigation_result[0]->_field_data['nid']['entity']->field_application_page['und'];
+			 
+			foreach($backwordarrow_pages_row as $key => $page){
+				$page_term = taxonomy_term_load($page['tid']);
+				$page_name = $page_term->name;
+				$pages['backwordarrow'][$key] =  $page_name;
+
+			}	
+			
+			$forward_pages_row = $view_navigation_result[1]->_field_data['nid']['entity']->field_application_page['und'];
+			 
+			foreach($forward_pages_row as $key => $page){
+				$page_term = taxonomy_term_load($page['tid']);
+				$page_name = $page_term->name;
+				$pages1['forwardarrow'][$key] =  $page_name;
+
+			}	
+			$navigationPages = array_merge($pages1,$pages) ;
+			
+			/// Looping through the contents of Application Step fields
+			
+			foreach($stepRows as $rows){	;
+				
+				$item_array = array();
+				$application_term = taxonomy_term_load($rows->field_application_screen['und'][0]['tid']);
+				$application_screen = $application_term->name;
+				$step_api_url = !empty($application_term->field_step_api_url['und'][0]['value']) ? $step_api_url : "";
+				$display_as_modal = !empty($application_term->field_display_as_modal['und'][0]['value']) ? $application_term->field_display_as_modal['und'][0]['value'] : "";
+				$conditional = !empty($application_term->field_conditional['und'][0]['value']) ? $application_term->field_conditional['und'][0]['value'] : "";
+				$dependent_step_term = taxonomy_term_load($application_term->field_dependent_step['und'][0]['tid']);
+				$dependent_step = !empty($dependent_step_term->name) ? $dependent_step_term->name : "";
+				$dependent_item = $application_term->field_dependent_field['und'][0]['value'];
+				$field_item = field_collection_item_load($dependent_item);
+				$dependent_field_label = !empty($field_item->field_field_label['und'][0]['value']) ? $field_item->field_field_label['und'][0]['value'] : ""; 
+				
+				$fieldValues = array();
+				foreach($application_term->field_dependent_field_value['und'] as $field_val){
+					$fieldValues[] = $field_val['value'];
+				}
+				$dependency_condition = array(
+											"dependent_step"=>$dependent_step,
+											"dependent_field"=>$dependent_field_label,
+											"dependent_field_values"=>!empty($fieldValues) ? $fieldValues : "",
+											);
+				foreach($rows->field_form_fields['und'] as $val){
+					
+					$item_array[] =  $val['value'];
+					$item_count = count($rows->field_form_fields['und']);
+				
+				}
+				
+				$form_fields = field_collection_item_load_multiple($item_array);
+				
+				$field_configurable_items = array();
+				$field_config_arr = array();
+				
+				foreach($form_fields as $form_fields_config){
+					
+					$field_label = (!empty($form_fields_config->field_field_label['und'][0]['value'])) ? $form_fields_config->field_field_label['und'][0]['value'] : "";
+					$field_machine_name = (!empty($form_fields_config->field_machine_name['und'][0]['value'])) ? $form_fields_config->field_machine_name['und'][0]['value'] : "";
+					$field_editable = (isset($form_fields_config->field_editable['und'][0]['value'])) ? $form_fields_config->field_editable['und'][0]['value'] : "";
+					$field_mandatory = (isset($form_fields_config->field_mandatory['und'][0]['value'])) ? $form_fields_config->field_mandatory['und'][0]['value'] : "";
+					$field_display = (isset($form_fields_config->field_display['und'][0]['value'])) ? $form_fields_config->field_display['und'][0]['value'] : "";
+					$field_type_term = taxonomy_term_load($form_fields_config->field_datatype['und'][0]['tid']);
+					$field_type = (!empty($field_type_term->name)) ? $field_type_term->name : "";
+					$field_validation_regex = (!empty($form_fields_config->field_validation_regex['und'][0]['value'])) ? $form_fields_config->field_validation_regex['und'][0]['value'] : "";					
+					$field_api_term = taxonomy_term_load($form_fields_config->field_api_parameter['und'][0]['tid']);
+					$field_api = (!empty($field_api_term->name)) ? $field_api_term->name : "";
+					$field_mandatory_condition = (!empty($form_fields_config->field_condition_for_mandatory['und'][0]['value'])) ? $form_fields_config->field_condition_for_mandatory['und'][0]['value'] : "";
+					$field_editable_condition = (!empty($form_fields_config->field_condition_for_editable['und'][0]['value'])) ? $form_fields_config->field_condition_for_editable['und'][0]['value'] : "";
+					$field_display_condition = (!empty($form_fields_config->field_condition_to_display['und'][0]['value'])) ? $form_fields_config->field_condition_to_display['und'][0]['value'] : "";
+					$field_message_text = node_load($form_fields_config->field_message_text['und'][0]['target_id']);
+					$message_code = (!empty($field_message_text)) ? $field_message_text->title : "";
+					$vocabulary_vid = (!empty($form_fields_config->field_value_term['und'][0]['value'])) ? $form_fields_config->field_value_term['und'][0]['value'] : "";
+					if(!empty($form_fields_config->field_result_condition)){
+						foreach($form_fields_config->field_result_condition['und'] as $result_val){
+							$result_item_array[] =  $result_val['value'];
+						}
+					}
+					$result_condition_values = field_collection_item_load_multiple($result_item_array);
+					
+					
+					$terms = taxonomy_get_tree($vocabulary_vid,0,NULL,TRUE);
+					$result_condition_arr = array();
+				
+					foreach($terms as $val){ 
+						foreach($result_condition_values as $result_conditions){
+							$display_value = $result_conditions->field_display_value['und'][0]['value'];
+							$display_type = $val->field_display_type['und'][0]['value'];
+							if($display_value == $val->tid){
+								$display_step = $result_conditions->field_display_step['und'][0]['value'];
+								
+								break;
+							} 
+							else{
+								$display_step = "";
+							}
+							
+						}$result_condition_arr[] = array(
+												"value"=>$val->name,
+												"display_type"=>(!empty($display_type)) ? $display_type : "",
+												"result_condition"=>array("display_step"=>$display_step,
+												),
+											  );
+					}
+					$field_config_arr[] = 	array(
+												"field_label"=>$field_label,
+												"unique_id"=>$field_machine_name,
+												"is_mandatory"=>(int)$field_mandatory,
+												"is_editable"=>(int)$field_editable,
+												"is_display"=>(int)$field_display,
+												"field_type"=>$field_type,
+												"validation_regex"=>$field_validation_regex,
+												"message_code"=>$message_code,
+												"api_key"=>$field_api,
+												"mandatory_condition"=>$field_mandatory_condition,
+												"editable_condition"=>$field_editable_condition,
+												"display_condition"=>$field_display_condition,
+												"field_values"=>$result_condition_arr,
+											);
+					
+				}
+				
+				$screen_config_arr[] = array("number_of_fields"=>$item_count,
+											"step_name"=>$application_screen,
+											"step_api_url"=>$step_api_url,
+											"display_as_modal"=>$display_as_modal,											
+											"conditional"=>$conditional,	
+											"dependency_condition"=>$dependency_condition,		
+											"fields"=>$field_config_arr,
+										);
+										
+				//// Complete array containing all the data for configuration message, application steps, and field level configuration
+				
+				$field_configurable_items['constant_text'] = $message_arr;
+				$field_configurable_items['application_steps'] = $screen_config_arr;
+				$field_configurable_items['workflow_engine'] = $application_pages;
+				$field_configurable_items['program_config'] = $program_Data;
+				$field_configurable_items['arrow_navigation'] = $navigationPages;
+				
+				/// Check if Encryption Key has been provided
+				
+				if($server_url){
+					$field_configurable_items['encryption_key'] = $encryption_key;
+				}
+				
+				/// Check if server URL has been provided
+				
+				if($server_url){
+					$field_configurable_items['base_url'] = $server_url;
+				}
+				
+				/// Check if face recognition percentage has been provided
+				
+				if($face_recognition_value){
+					$field_configurable_items['face_recognition_min_percent_to_match'] = $face_recognition_value;
+				}
+				
+				/// Check if screen waiting time has been provided
+				
+				if($screen_waiting_time){
+					$field_configurable_items['splash_screen_waiting_time_in_sec'] = $screen_waiting_time;
+				}
+				
+				/// Check if server URL has been provided
+				
+				if($auto_logout_time){
+					$field_configurable_items['auto_logout_waiting_time_in_sec'] = $auto_logout_time;
+				}
+				
+				/// Check if number of modules to complete has been provided
+				
+				if($module_number){
+					$field_configurable_items['number_of_module_to_check_completion_percentage'] = $module_number;
+				}
+				
+			}
+			return array("status"=>true, "data"=>$field_configurable_items);	/// Success message
+		}
+		else if(empty($result_msg_config)) {
+			return array("status"=>false, "message" => "No data found from Database.");	/// Failure message for configuration message data is missing
+		} 
+		else if(empty($view_result)) {
+			return array("status"=>false, "message" => "No data found from Database.");	/// Failure message for configuration message data is missing
+		} 
+		else if(empty($result_field_config)) {
+			return array("status"=>false, "message" => "No data found from Database.");	/// Failure message for configuration message data is missing
+		} 			
+		else {
+			return array("status"=>false, "message" => "Invalid data. Please provide valid data."); /// Failure message if field configuration not provided
+		} 
+	}
+	catch (Exception $e) {
+		return array("status"=>false,"message"=> "No data found. Please try again later.");
+	}	
+}
+
+
+///////////////// Configurable Server URL settings for admin ////////////////////////
+
+
+function url_setings_form($form, &$form_state){
+	$form=array();
+	$form['drupal_api_url']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter URL for Drupal API',
+		'#default_value' => variable_get('drupal_api_url'),
+	);
+	$form['lambda_api_url']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter URL for Lambda API',
+		'#default_value' => variable_get('lambda_api_url'),
+	);
+	$form['submit']=array(
+		'#type'=>'submit',
+		'#value'=>'Submit'
+	);
+	$form['#submit'][]='url_setings_form_submit';
+	return $form;
+}
+
+function url_setings_form_submit($form,&$form_state) {
+	variable_set('drupal_api_url', $form_state['values']['drupal_api_url']);
+	variable_set('lambda_api_url', $form_state['values']['lambda_api_url']);
+    drupal_set_message(t('Successfully Saved.'));
+}
+
+///////////////// Configurable Apllication settings for admin ////////////////////////
+
+function config_setings_form($form, &$form_state){
+	$form=array();
+	$form['encryption_key']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Encryption Key',
+		'#default_value' => variable_get('encryption_key'),
+	);
+	$form['face_recognition']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Face recognition Percentage to match',
+		'#default_value' => variable_get('face_recognition'),
+	);
+	$form['screen_waiting_time']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Splash Screen waiting time(In seconds)',
+		'#default_value' => variable_get('screen_waiting_time'),
+	);
+	$form['auto_logout_time']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Auto Logout waiting time(In seconds)',
+		'#default_value' => variable_get('auto_logout_time'),
+	);
+	$form['module_number']=array(
+		'#type'=>'textfield',
+		'#title'=>'Enter Number of modules to check completion percentage',
+		'#default_value' => variable_get('module_number'),
+	);
+	$form['submit']=array(
+		'#type'=>'submit',
+		'#value'=>'Submit'
+	);
+	$form['#submit'][]='config_setings_form_submit';
+	return $form;
+}
+function config_setings_form_validate($form,&$form_state) {
+	if(preg_match('/[^0-9.]/', $form_state['values']['face_recognition'])) {
+		form_set_error('investment_fee_percentage', 'Face recognition value contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['screen_waiting_time'])) {
+		form_set_error('investment_fee_percentage', 'Screen waiting time contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['auto_logout_time'])) {
+		form_set_error('investment_fee_percentage', 'Auto logout time contains non numeric characters');
+	}
+	if(preg_match('/[^0-9.]/', $form_state['values']['module_number'])) {
+		form_set_error('investment_fee_percentage', 'Module number contains non numeric characters');
+	}
+}
+function config_setings_form_submit($form,&$form_state) {
+	variable_set('encryption_key', $form_state['values']['encryption_key']);
+	variable_set('face_recognition', $form_state['values']['face_recognition']);
+	variable_set('screen_waiting_time', $form_state['values']['screen_waiting_time']);
+	variable_set('auto_logout_time', $form_state['values']['auto_logout_time']);
+	variable_set('module_number', $form_state['values']['module_number']);
+    drupal_set_message(t('Successfully Saved.'));
+}
+
+function workflow_api_node_postsave($node, $op) {
+	//watchdog('hook_post_config_test', '<pre>' . print_r( $node, true) . '</pre>');
+
+	global $user;
+	if (!empty($node->field_application_platform)) {
+		foreach($node->field_application_platform['und'] as $platform_key=>$platform_val) {
+			$step_node = new stdClass();
+			$step_node->type = 'platform_step';
+			node_object_prepare($step_node);
+			
+			$platform_term = taxonomy_term_load($platform_val['tid']);
+			$platform_name = $platform_term->name;
+			$step_node->title = $platform_name;
+			$step_node->language = LANGUAGE_NONE;
+			$step_node->uid = $user->uid; 
+			$step_node->status = 1; //(1 or 0): published or not
+			$step_node->promote = 0; //(1 or 0): promoted to front page
+			$step_node->comment = 1; // 0 = comments disabled, 1 = read only, 2 = read/write
+
+			
+			$step_node->field_application[$step_node->language][0]['target_id'] = $node->nid;
+			$step_node->field_platform_type[$step_node->language]['0']['tid'] = $platform_val['tid'];
+			
+			$step_node = node_submit($step_node); // Prepare node for saving
+			
+			node_save($step_node);
+		}
+	} 
+}

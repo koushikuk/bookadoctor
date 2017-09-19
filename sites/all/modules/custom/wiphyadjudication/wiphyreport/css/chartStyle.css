@@ -1,0 +1,60 @@
+#wrapper {
+    width: auto;
+    /*border: 1px solid black;*/
+    overflow: hidden; /* add this to contain floated children */
+     
+}
+.customChart{
+	margin-top: 50px;
+	text-align:center;
+}
+#barchart_material {
+/* overflow-x: scroll;
+ overflow-y: hidden;  
+  width: 900px; 
+ height: 1000px;
+ margin-top: 50px;*/   
+}
+.waitingTimeText{
+	margin-top: 50px;
+	color: #fff;
+	font-family: Georgia;
+	font-size: 18px; 		
+}
+
+#facility_material {
+ overflow-x: scroll;
+ overflow-y: hidden;     
+ width: 900px;
+ height: 550px;
+}
+
+#barchart_checkin {
+    float: left; /* add this */
+    width: 970px;
+    height: 500px;
+    padding: 25px;
+    margin: 25px;
+}
+
+#chart_div {
+    float: left; /* add this */
+    width: 800px;
+    height: 400px;
+    padding: 25px;
+    margin: 25px;
+}
+.loder{ position: relative; }
+#wait{ display: none; position:absolute; width: 100%; height: 100%; background-color: rgba(255, 255,255,0.75); z-index: 98; 
+}
+.waitText{
+top:8%;
+left:50%; 
+font-size:20px;
+transform:translate(-50%,-8%);
+position:absolute;	
+}
+#wait img{
+	width:32px; height: 32px; position:absolute; top:20%; left:50%; margin-left: -16px; margin-top: -16px; z-index: 99;
+}
+.heading{ margin-top: 50px;}

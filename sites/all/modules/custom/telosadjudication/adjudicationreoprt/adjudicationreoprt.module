@@ -1,0 +1,174 @@
+<?php
+
+
+ /**
+ * Implements hook_permission().
+ */
+function adjudicationreoprt_permission() {
+  return array( 
+    'access_adjudication_report' => array(
+      'title' => t('access adjudication Report'),
+    )
+  );
+} 
+
+/**
+ * Implements hook_init().
+ 
+ */
+function  adjudicationreoprt_init(){
+	global $user;
+	drupal_add_css(drupal_get_path('module', 'telosadjudication')."/css/header_footer.css");
+	drupal_add_css(drupal_get_path('module', 'telosadjudication')."/css/custom.css");		
+}
+
+/**
+ * Implements hook_form().
+ */
+ 
+ function adjudicationreoprt_menu() {
+	$items['adjudication_report'] = array(
+		'title' => 'Adjudication Report', 
+		'description' => 'Adjudication Report Module',
+		'page callback' => 'adjudication_report',
+		'page arguments' => '',
+		'access arguments' => array('access_adjudication_report'),
+	);
+
+   return $items; 
+ }
+
+ 
+ 
+function adjudicationreoprt_theme($existing, $type, $theme, $path) {
+     
+	$items['adjudication_report'] = array(
+        'template' => 'template/adjudication_report',
+        'variables' => array(
+			'results' => NULL,
+	    ), 
+ 
+	);
+ 
+   return $items;
+}
+
+function adjudication_report(){
+	global $user;
+	$userdetails = user_load($user->uid);
+	     
+ // get all pending adjudication data
+ 	
+    if(in_array('administrator', $user->roles)) {
+		 $appstatus  = array(fnEncrypt('verification pending'),fnEncrypt('resubmited'),fnEncrypt('completed'),fnEncrypt('verified'),fnEncrypt('rejected'));
+         $dataArray = fetch_data_by_status($appstatus);
+	}
+    if(in_array('adjudicator', $user->roles)) {  
+		 $userdetails  = user_load($user->uid);
+	     $appstatus  = array(fnEncrypt('verification pending'),fnEncrypt('resubmited'),fnEncrypt('completed'),fnEncrypt('verified'),fnEncrypt('rejected'));
+         $dataArray = fetch_data_by_status($appstatus);
+   }
+	  
+	 
+	 $i=0;
+	 foreach($dataArray['result'] as $val){
+		 
+		  
+    $row[$i]['applicationId'] = (!empty($val['applicationId'])) ? $val['applicationId'] : '';   
+   $endtime = (!empty($val['endTime'])) ? $val['endTime'] : '';
+   if(empty($val['endTime'])){
+	   $checkin = '<input type="button" name="checkin" class="checkins" value="Check In" id="'.$row[$i]['applicationId'].'">';
+   }else {
+	   $checkin = "";
+   }
+   $application_status=$val['applicationStatus'];
+ 
+    // --- Time in queue ----//
+	 $timeinqueue = timeinqueuediff($val['startTime']); 
+	 
+  // --- Time in queue ends ----//
+
+	$facial_status =  fnDecrypt($val['adjudication']['facial_status']);
+
+	$program_eligibility_validation = fnDecrypt($val['adjudication']['program_eligibility_validation'][0]['isSuccess']);;
+  
+	$adjudicator_id =  fnDecrypt($val['adjudication']['adjudicator_id']);
+  
+	if(!empty($adjudicator_id)){ 
+		$adjudicator_action = '<input type="text" name="appid"  value="Action Taken" id="'.$val['applicationId'].'" readonly="false" style="color:green;border:none;background:none">';
+	}    
+	else {
+	      $adjudicator_action = '<input type="text" name="appid"  value="Open" id="'.$val['applicationId'].'" readonly="false" style="color:red;border:none;background:none">';
+	}
+  
+  
+   
+	if($facial_status == 'false'){
+	  $facial_issue = 'Facial Match Failed<br>';
+	}
+	else {
+	   $facial_issue = 'Facial Match Passed<br>';
+	}
+
+	if($program_eligibility_validation == 'false'){
+	  $program_issue = 'Program Eligibility Failed';
+	}
+	else{
+	  $program_issue = 'Program Eligibility Passed';
+	}
+  
+   $adjudication_issue = $facial_issue.' '.$program_issue;
+   
+   $claimid = $user->uid.'_'.$facial_status.'_'.$program_eligibility_validation.'_'.$row[$i]['applicationId'];
+  
+	if(!empty($adjudicator_id)){ 
+		if($adjudicator_id==$user->uid  && (fnDecrypt($val['applicationStatus'])!='resubmited')){
+			$program_validation_status = '<input type="button" name="claim_button" class="claimbutton" value="Claim" class="verifiedids" data-appid="'.$row[$i]['applicationId'].'" id="'.$claimid.'">';    
+		}
+		else if((fnDecrypt($val['applicationStatus'])=='resubmited')){
+			
+			
+			$program_validation_status = '<input type="text" name="appid"  value="Marked for re-submission'.fnDecrypt($val['adjudication']['resubmission_type']).'" id="'.$claimid.'" readonly="false" style="color:red;border:none;background:none">';
+			
+			
+			
+		}		
+		else{
+			$program_validation_status = '<input type="button" name="claim_button" class="claimbutton" value="Claim" class="verifiedids" data-appid="'.$row[$i]['applicationId'].'" id="'.$claimid.'" disabled="disabled">';
+		}
+	}    
+	else {
+	      $program_validation_status = '<input type="button" name="claim_button" class="claimbutton" value="Claim" class="verifiedids" data-appid="'.$row[$i]['applicationId'].'" id="'.$claimid.'">';  
+	}
+	
+  
+   
+   
+   $unique_id = '<input type="hidden" name="appid"  value="'.$val['applicationId'].'" id="'.$val['applicationId'].'">';
+   
+   $subprogram =(!empty($val['applicationData']['program'])) ? $val['applicationData']['program'] : '';
+   
+   //$applicationStatus = $result[$i]['applicationStatus'];
+   
+   $firstname = (!empty($val['applicationData']['biographic']['name']['firstName'])) ? fnDecrypt($val['applicationData']['biographic']['name']['firstName']) : ''; 
+   $lastname = (!empty($val['applicationData']['biographic']['name']['lastName'])) ? substr(fnDecrypt($val['applicationData']['biographic']['name']['lastName']),0,1) : '';
+   if(isset($val['updateTime'])){
+   $val_update_time_sec = round($val['updateTime'] / 1000);
+   $name = $firstname." ".$lastname;
+   $row[$i]['name'] = $name;
+   $row[$i]['subprogram'] = fnDecrypt($subprogram);
+   $row[$i]['starttime'] = $timeinqueue; 
+   $row[$i]['adjudication_issue'] = $adjudication_issue;
+   $row[$i]['endTime'] =  $adjudicator_action;
+   $row[$i]['checkin'] = $program_validation_status;
+   $row[$i]['updateTime'] =  $val_update_time_sec;
+   $row[$i]['unique_id'] = $unique_id ;
+   $row[$i]['application_status'] = fnDecrypt($application_status) ;
+   $i++;
+	 }
+	
+ }				  
+return theme("adjudication_report",array('data'=>$row));
+}
+ 
+ 
